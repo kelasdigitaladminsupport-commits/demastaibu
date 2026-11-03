@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gold: #c9a227;
+  --color-gold-dark: #a88418;
+  --font-sans: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+html { scroll-behavior: smooth; }
+body { @apply bg-white text-slate-800 antialiased; }
+:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; }
+
+/* Cetak: sembunyikan navigasi, footer, dan elemen .no-print */
+@media print {
+  header, footer, nav, .no-print { display: none !important; }
+  body { background: #fff !important; }
+  main { padding: 0 !important; }
+  .print-area { border: none !important; box-shadow: none !important; }
+  .print-area header { display: block !important; }
+}
+
+/* ===== Animasi loading bermerek ===== */
+@keyframes brand-spin { to { transform: rotate(360deg); } }
+@keyframes brand-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(0.9); opacity: 0.8; } }
+@keyframes top-slide { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+
+.brand-ring {
+  border: 4px solid #d1fae5;
+  border-top-color: var(--color-gold);
+  border-right-color: #047857;
+  animation: brand-spin 0.9s linear infinite;
+}
+.brand-core { animation: brand-pulse 1.6s ease-in-out infinite; }
+
+.top-progress {
+  position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 110; overflow: hidden;
+  pointer-events: none; opacity: 0; transition: opacity 0.2s ease;
+}
+.top-progress[data-active="true"] { opacity: 1; }
+.top-progress-bar {
+  height: 100%; width: 40%;
+  background: linear-gradient(90deg, #047857, var(--color-gold));
+  animation: top-slide 1.1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-ring { animation-duration: 2.4s; }
+  .brand-core { animation: none; }
+  .top-progress-bar { animation-duration: 2.4s; }
+}

@@ -1,0 +1,61 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+  # Vite versi ini membutuhkan Node.js modern; kunci versinya agar build tidak bergantung pada bawaan Netlify.
+  [build.environment]
+    NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+
+# robots.txt dan sitemap.xml dibuat dinamis oleh fungsi (HARUS di atas aturan SPA di bawah)
+[[redirects]]
+  from = "/sitemap.xml"
+  to = "/.netlify/functions/sitemap"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/robots.txt"
+  to = "/.netlify/functions/robots"
+  status = 200
+  force = true
+
+# Metadata per halaman untuk pratinjau tautan & Google (hanya detail berita/agenda). HAPUS dua aturan ini bila ingin menonaktifkannya.
+[[redirects]]
+  from = "/berita/*"
+  to = "/.netlify/functions/meta?type=berita&slug=:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/agenda/*"
+  to = "/.netlify/functions/meta?type=agenda&slug=:splat"
+  status = 200
+  force = true
+
+# SPA: semua URL diarahkan ke index.html agar React Router bisa membuka halaman langsung
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Berkas hasil build memiliki nama berisi hash -> aman di-cache lama (menghemat bandwidth)
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    Strict-Transport-Security = "max-age=31536000"
+    # MODE LAPOR SAJA: tidak memblokir apa pun. Setelah deploy, buka situs, cek Console peramban
+    # (F12) pada semua halaman. Bila tidak ada pelanggaran "Content Security Policy", ganti nama header
+    # ini menjadi "Content-Security-Policy" agar benar-benar diberlakukan. Lihat docs/04-KEAMANAN.md.
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
