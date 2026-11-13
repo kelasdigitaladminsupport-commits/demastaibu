@@ -40,10 +40,17 @@ export async function fetchNewsEngagement(newsId: string, userId?: string) {
   return { comments, names, likeMap, newsLikes: ((newsLikes.data as { likes: number } | null)?.likes) ?? 0, liked }
 }
 
-export async function addNewsComment(v: { newsId: string; parentId: string | null; content: string; userId: string }) {
-  const { error } = await supabase.from('news_comments')
+export type NewsEngagementData = Awaited<ReturnType<typeof fetchNewsEngagement>>
+
+const COMMENT_COLS = 'id, news_id, parent_id, author_id, content, is_hidden, created_at, updated_at'
+
+/** Mengembalikan baris komentar yang baru dibuat agar dapat langsung ditampilkan tanpa menunggu muat ulang. */
+export async function addNewsComment(v: { newsId: string; parentId: string | null; content: string; userId: string }): Promise<NewsCommentRow> {
+  const { data, error } = await supabase.from('news_comments')
     .insert({ news_id: v.newsId, parent_id: v.parentId, content: v.content, author_id: v.userId })
+    .select(COMMENT_COLS).single()
   if (error) throw error
+  return data as unknown as NewsCommentRow
 }
 
 export async function updateNewsComment(id: string, content: string) {
