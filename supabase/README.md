@@ -18,6 +18,8 @@
 | 0013_recruitment_news_engagement.sql | pendaftaran pengurus DEMA + komentar & like berita |
 | 0014_staff_email_notifications.sql | notifikasi email ke staf (pg_net → fungsi Netlify → Resend) |
 | 0015_pmb_class_schedule.sql | pilihan jadwal kuliah pendaftar PMB (siang/malam), `submit_applicant` 14 argumen |
+| 0016_notifications_and_confirmations.sql | lonceng notifikasi staf (tabel notifications) + email konfirmasi ke pengirim formulir |
+| 0017_email_verification.sql | verifikasi email kolaborasi (token sekali pakai); konfirmasi PMB/pengurus ke email akun terverifikasi |
 
 Perubahan skema ke depan = berkas baru bernomor berikutnya. Jangan mengedit migrasi lama.
 

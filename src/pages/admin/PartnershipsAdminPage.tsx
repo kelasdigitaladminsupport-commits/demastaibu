@@ -26,6 +26,7 @@ interface Req {
   partner_type: string; cooperation_type: string; supported_program: string | null; support_form: string | null
   support_value: number | null; message: string; proposal_path: string | null; status: string
   publish_consent: boolean; assigned_to: string | null; created_at: string; updated_at: string
+  email_verified_at: string | null
 }
 interface Upd { id: string; author_id: string | null; note: string; status_to: string | null; is_internal: boolean; created_at: string }
 const PAGE = 15
@@ -144,7 +145,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
         <p className="mt-2"><Badge status={r.status} /></p>
         <dl className="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
           <div><dt className="text-xs font-semibold uppercase text-slate-400">Narahubung</dt><dd>{r.contact_person}</dd></div>
-          <div><dt className="text-xs font-semibold uppercase text-slate-400">Email</dt><dd><a href={`mailto:${r.email}?subject=${encodeURIComponent(`Re: Permohonan kerja sama ${r.reference_no}`)}`} className="inline-flex items-center gap-1 text-emerald-800 hover:underline"><Mail className="size-4" /> {r.email}</a></dd></div>
+          <div><dt className="text-xs font-semibold uppercase text-slate-400">Email</dt><dd><a href={`mailto:${r.email}?subject=${encodeURIComponent(`Re: Permohonan kerja sama ${r.reference_no}`)}`} className="inline-flex items-center gap-1 text-emerald-800 hover:underline"><Mail className="size-4" /> {r.email}</a>{r.email_verified_at ? <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Terverifikasi</span> : <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Belum terverifikasi</span>}</dd></div>
           {r.phone && <div><dt className="text-xs font-semibold uppercase text-slate-400">Telepon</dt><dd>{r.phone}</dd></div>}
           <div><dt className="text-xs font-semibold uppercase text-slate-400">Jenis kerja sama</dt><dd>{r.cooperation_type}</dd></div>
           {r.supported_program && <div><dt className="text-xs font-semibold uppercase text-slate-400">Program didukung</dt><dd>{r.supported_program}</dd></div>}

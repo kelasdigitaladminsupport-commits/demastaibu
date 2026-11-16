@@ -73,6 +73,7 @@ const publicChildren: RouteObject[] = [
   { path: 'forum/baru', lazy: lazyPage(() => import('../pages/public/ForumNewTopicPage'), 'ForumNewTopicPage') },
   { path: 'forum/topik/:id', lazy: lazyPage(() => import('../pages/public/ForumTopicPage'), 'ForumTopicPage') },
   { path: 'kolaborasi', lazy: lazyPage(() => import('../pages/public/PartnershipPage'), 'PartnershipPage') },
+  { path: 'kolaborasi/verifikasi', lazy: lazyPage(() => import('../pages/public/PartnershipVerifyPage'), 'PartnershipVerifyPage') },
   { path: 'donasi', lazy: lazyPage(() => import('../pages/public/DonationPage'), 'DonationPage') },
   { path: 'pmb', lazy: lazyPage(() => import('../pages/public/PmbInfoPage'), 'PmbInfoPage') },
   { path: 'pmb/daftar', lazy: lazyPage(() => import('../pages/public/PmbRegisterPage'), 'PmbRegisterPage') },

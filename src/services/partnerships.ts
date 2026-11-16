@@ -9,6 +9,7 @@ export interface Sponsor { id: string; name: string; logo_path: string | null; d
 function mapError(message: string): string {
   if (/rate_limit_exceeded/.test(message)) return 'Terlalu banyak percobaan. Coba lagi nanti.'
   if (/invalid_proposal_path/.test(message)) return 'Berkas proposal tidak valid.'
+  if (/invalid_token/.test(message)) return 'Tautan verifikasi tidak valid atau sudah kedaluwarsa.'
   return 'Permintaan gagal diproses. Periksa isian Anda lalu coba lagi.'
 }
 
@@ -50,4 +51,11 @@ export async function fetchSponsors(): Promise<Sponsor[]> {
     .eq('is_published', true).order('sort_order').order('name')
   if (error) throw error
   return (data ?? []) as unknown as Sponsor[]
+}
+
+/** Dipanggil saat pemilik email menekan tombol di halaman verifikasi (bukan otomatis saat tautan dibuka). */
+export async function verifyPartnershipEmail(token: string): Promise<string> {
+  const { data, error } = await supabase.rpc('verify_partnership_email', { p_token: token })
+  if (error) throw new Error(mapError(error.message))
+  return (data as { reference_no: string }).reference_no
 }

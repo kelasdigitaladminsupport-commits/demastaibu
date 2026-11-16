@@ -38,6 +38,7 @@ export function SubmitForm({ onTrack }: { onTrack: (ref: string, email: string) 
         <CheckCircle2 className="mx-auto size-12 text-emerald-700" aria-hidden />
         <h2 className="mt-3 font-display text-xl font-semibold text-emerald-950">Permohonan terkirim</h2>
         <p className="mt-1 text-sm text-slate-600">Simpan nomor referensi ini. Untuk melacak status Anda memerlukan nomor referensi <em>dan</em> email yang Anda isi.</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">Kami mengirim email verifikasi ke <strong>{done.email}</strong>. Buka email itu dan tekan tombol verifikasi agar email konfirmasi dapat kami kirim (periksa folder spam bila belum terlihat).</p>
         <p className="mx-auto mt-4 w-fit rounded-xl border-2 border-dashed border-emerald-600 bg-white px-6 py-3 font-mono text-2xl font-bold tracking-wider text-emerald-900">{done.ref}</p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(done.ref); toast.success('Nomor disalin.') } catch { toast.error('Gagal menyalin.') } }}><Copy className="size-4" /> Salin nomor</Button>

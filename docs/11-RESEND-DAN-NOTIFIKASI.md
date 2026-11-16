@@ -22,7 +22,7 @@ Siapa yang diberi tahu (otomatis dari role, akun yang diblokir dilewati):
 | Aspirasi baru | Super Admin, Admin, Moderator |
 | Pesan kontak baru | Super Admin, Admin |
 | Permohonan kemitraan | Super Admin, Admin |
-| Pendaftar PMB | Super Admin, Petugas PMB |
+| Pendaftar PMB | Super Admin, Admin, Petugas PMB |
 | Pendaftar pengurus | Super Admin, Admin |
 
 Email hanya berisi jenis, nomor referensi, dan tombol ke dasbor (tanpa data pribadi). Email dikirim ke alamat akun masing-masing staf.
@@ -42,3 +42,31 @@ Email hanya berisi jenis, nomor referensi, dan tombol ke dasbor (tanpa data prib
 3. Uji: kirim pesan lewat halaman Kontak; staf harus menerima email. Bila tidak: Netlify → Functions → `notify` → log; Supabase → Logs → Postgres.
 
 Catatan: staf yang tidak ingin menerima email cukup dicabut role-nya dari modul terkait. Resend paket gratis dibatasi jumlah email per hari/bulan; periksa kuota akun Anda.
+
+## D. Notifikasi dasbor (lonceng) dan email konfirmasi ke pengirim formulir (migrasi 0016)
+Jalankan `supabase/migrations/0016_notifications_and_confirmations.sql` setelah 0014 (tanpa konfigurasi tambahan).
+
+**1. Lonceng notifikasi di dasbor admin.** Setiap kejadian pada tabel C di atas juga menambah notifikasi untuk Super Admin/Admin (dan peran terkait) di ikon lonceng pojok kanan atas dasbor. Isinya hanya jenis + nomor referensi; klik untuk membuka modulnya. Lonceng ini bekerja **meskipun Resend belum dikonfigurasi**, dan diperbarui otomatis tiap 1 menit.
+
+**2. Email konfirmasi otomatis ke pengirim.** Setelah formulir terkirim, alamat email yang diisi pengguna menerima konfirmasi:
+| Formulir | Isi email |
+|---|---|
+| Pendaftaran Mahasiswa Baru | nama, nomor pendaftaran, tombol ke halaman cek status |
+| Pendaftaran pengurus DEMA | nama, nomor pendaftaran, tombol ke halaman pendaftaran |
+| Kolaborasi / kerja sama | nama kontak, nomor referensi, tombol ke halaman kolaborasi |
+
+Catatan keamanan: **Kode Pelacakan PMB sengaja tidak dikirim lewat email** (database hanya menyimpan hash-nya dan menampilkannya sekali di layar). Email konfirmasi memakai fungsi, rahasia, dan variabel Netlify yang sama dengan bagian C, jadi tidak ada pemasangan baru; **deploy ulang situs** agar fungsi `notify` versi baru aktif. Uji: kirim satu formulir dengan email Anda sendiri.
+
+## E. Verifikasi email (migrasi 0017)
+Jalankan `supabase/migrations/0017_email_verification.sql` setelah 0016, lalu **deploy ulang** situs (fungsi `notify` dan halaman baru).
+
+| Formulir | Alur |
+|---|---|
+| Kolaborasi / kerja sama (tanpa login) | Formulir terkirim → email **verifikasi** berisi tombol (berlaku 3 hari, sekali pakai) → pemilik email menekan **Verifikasi email saya** di `/kolaborasi/verifikasi` → barulah email **konfirmasi** dikirim. |
+| PMB dan pendaftaran pengurus (wajib login) | Konfirmasi dikirim ke **email akun yang sudah terverifikasi** Supabase Auth, bukan ke isian bebas di formulir. Akun yang emailnya belum dikonfirmasi tidak dikirimi apa pun. |
+
+Catatan:
+- Verifikasi baru terjadi saat tombol ditekan, bukan saat tautan dibuka, sehingga pemindai email tidak menghabiskan tautan.
+- Di dasbor admin (Kolaborasi), email pengaju diberi lencana **Terverifikasi / Belum terverifikasi**. Pengajuan yang belum terverifikasi tetap masuk ke daftar dan staf tetap diberi notifikasi; hanya saja alamat emailnya belum terbukti milik pengaju.
+- Penting: Supabase Auth harus mewajibkan konfirmasi email (Authentication → Providers → Email → *Confirm email* aktif), agar email akun PMB/pengurus benar-benar terverifikasi.
+- Bila `private.notify_config` belum diisi, tidak ada email verifikasi/konfirmasi yang dikirim.
