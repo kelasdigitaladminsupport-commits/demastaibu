@@ -11,6 +11,7 @@ import { useSiteSettings } from '../../features/settings/useSiteSettings'
 import { fetchPmbInfo } from '../../services/pmb'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatDate } from '../../utils/format'
+import { CLASS_SCHEDULES } from '../../features/pmb/constants'
 
 export function PmbInfoPage() {
   useDocumentTitle('Informasi Calon Mahasiswa Baru')
@@ -50,6 +51,15 @@ export function PmbInfoPage() {
                 {p.schedule && (<><h3 className="mt-6 font-semibold text-emerald-900">Jadwal</h3><TextContent text={p.schedule} className="mt-2" /></>)}
               </section>
             ))}
+            <section className="rounded-2xl border border-slate-200 bg-white p-6">
+              <h2 className="font-display text-2xl font-bold text-emerald-950">Jadwal perkuliahan</h2>
+              <p className="mt-2 text-sm text-slate-600">Kampus membuka dua pilihan waktu kuliah. Pilih salah satu saat mengisi formulir pendaftaran.</p>
+              <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+                {CLASS_SCHEDULES.map((s) => (
+                  <li key={s.value} className="rounded-xl bg-emerald-50 p-4"><p className="font-semibold text-emerald-950">{s.label}</p><p className="text-sm text-slate-700">{s.time}</p></li>
+                ))}
+              </ul>
+            </section>
             {programs.length > 0 && (
               <section>
                 <h2 className="font-display text-2xl font-bold text-emerald-950">Program studi</h2>

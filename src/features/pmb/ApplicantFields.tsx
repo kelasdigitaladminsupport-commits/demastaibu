@@ -1,15 +1,29 @@
 import type { FieldErrors, UseFormRegister } from 'react-hook-form'
 import { Field, inputClass } from '../../components/ui/Field'
+import { CLASS_SCHEDULES } from './constants'
 
 export interface ApplicantValues {
   fullName: string; birthPlace: string; birthDate: string; gender: string; email: string; phone: string
   address: string; previousSchool: string; graduationYear: string; guardianName: string; guardianPhone: string
+  classSchedule: string
 }
 
 export function ApplicantFields({ register, errors }: { register: UseFormRegister<ApplicantValues>; errors: FieldErrors<ApplicantValues> }) {
   const max = (n: number) => ({ maxLength: { value: n, message: `Maksimal ${n} karakter` } })
   return (
     <div className="grid gap-5 sm:grid-cols-2">
+      <fieldset className="sm:col-span-2" aria-describedby={errors.classSchedule ? 'classSchedule-error' : undefined}>
+        <legend className="text-sm font-medium text-slate-700">Jadwal perkuliahan *</legend>
+        <div className="mt-1.5 grid gap-3 sm:grid-cols-2">
+          {CLASS_SCHEDULES.map((s) => (
+            <label key={s.value} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-300 bg-white p-3.5 text-sm has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600/30">
+              <input type="radio" value={s.value} className="mt-0.5 size-4 accent-emerald-700" {...register('classSchedule', { required: 'Pilih jadwal perkuliahan' })} />
+              <span><span className="block font-semibold text-slate-900">{s.label}</span><span className="block text-slate-600">{s.time}</span></span>
+            </label>
+          ))}
+        </div>
+        {errors.classSchedule && <p id="classSchedule-error" role="alert" className="mt-1.5 text-xs font-medium text-red-600">{errors.classSchedule.message}</p>}
+      </fieldset>
       <Field label="Nama lengkap *" htmlFor="fullName" error={errors.fullName?.message}>
         <input id="fullName" autoComplete="name" className={inputClass} {...register('fullName', { required: 'Wajib diisi', minLength: { value: 2, message: 'Minimal 2 karakter' }, ...max(150) })} />
       </Field>

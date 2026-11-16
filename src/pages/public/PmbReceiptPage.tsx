@@ -5,7 +5,7 @@ import { Container } from '../../components/ui/Container'
 import { Button, ButtonLink } from '../../components/ui/Button'
 import { PageLoading } from '../../components/ui/Loading'
 import { LoginPrompt } from '../../features/forum/LoginPrompt'
-import { APPLICANT_STATUS_LABEL, GENDER_LABEL } from '../../features/pmb/constants'
+import { APPLICANT_STATUS_LABEL, GENDER_LABEL, classScheduleText } from '../../features/pmb/constants'
 import { NotFoundPage } from './NotFoundPage'
 import { useAuth } from '../../hooks/useAuth'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
@@ -31,6 +31,7 @@ export function PmbReceiptPage() {
     ['Nama lengkap', a.full_name],
     ['Program studi', a.program?.name ?? '—'],
     ['Periode', `${a.period?.name ?? '—'} (${a.period?.academic_year ?? '—'})`],
+    ['Jadwal perkuliahan', classScheduleText(a.class_schedule)],
     ['Tempat, tanggal lahir', [a.birth_place, a.birth_date ? formatDate(a.birth_date) : null].filter(Boolean).join(', ') || '—'],
     ['Jenis kelamin', a.gender ? GENDER_LABEL[a.gender] : '—'],
     ['Email', a.email],

@@ -12,7 +12,7 @@ import { QueryBoundary } from '../../components/ui/QueryBoundary'
 import { SearchBar } from '../../components/ui/SearchBar'
 import { ResourceManager } from '../../features/admin/ResourceManager'
 import { RESOURCES } from '../../features/admin/resources'
-import { APPLICANT_STATUSES, APPLICANT_STATUS_CLS, APPLICANT_STATUS_LABEL, GENDER_LABEL } from '../../features/pmb/constants'
+import { APPLICANT_STATUSES, APPLICANT_STATUS_CLS, APPLICANT_STATUS_LABEL, CLASS_SCHEDULES, CLASS_SCHEDULE_LABEL, GENDER_LABEL, classScheduleText } from '../../features/pmb/constants'
 import { useAuth } from '../../hooks/useAuth'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { supabase } from '../../lib/supabase'
@@ -26,20 +26,22 @@ interface Row {
   id: string; registration_no: string; full_name: string; status: string; created_at: string
   birth_place: string | null; birth_date: string | null; gender: string | null; email: string; phone: string | null; address: string | null
   previous_school: string | null; graduation_year: number | null; guardian_name: string | null; guardian_phone: string | null
+  class_schedule: string | null
   period: { name: string; academic_year: string } | null; program: { name: string } | null
 }
 interface Hist { id: string; status_from: string | null; status_to: string; note_public: string | null; note_internal: string | null; changed_by: string | null; created_at: string }
 const PAGE = 15
-const COLS = 'id, registration_no, full_name, status, created_at, birth_place, birth_date, gender, email, phone, address, previous_school, graduation_year, guardian_name, guardian_phone, period:pmb_periods(name, academic_year), program:study_programs(name)'
+const COLS = 'id, registration_no, full_name, status, created_at, birth_place, birth_date, gender, email, phone, address, previous_school, graduation_year, guardian_name, guardian_phone, class_schedule, period:pmb_periods(name, academic_year), program:study_programs(name)'
 const Badge = ({ status }: { status: string }) => <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${APPLICANT_STATUS_CLS[status] ?? ''}`}>{APPLICANT_STATUS_LABEL[status] ?? status}</span>
 
-interface Filters { q: string; status: string; periodId: string; programId: string }
+interface Filters { q: string; status: string; periodId: string; programId: string; schedule: string }
 
 function applyFilters<T extends { eq: (c: string, v: string) => T; ilike: (c: string, v: string) => T }>(query: T, f: Filters): T {
   let qy = query
   if (f.status) qy = qy.eq('status', f.status)
   if (f.periodId) qy = qy.eq('period_id', f.periodId)
   if (f.programId) qy = qy.eq('program_id', f.programId)
+  if (f.schedule) qy = qy.eq('class_schedule', f.schedule)
   if (f.q) qy = /^PMB/i.test(f.q) ? qy.eq('registration_no', f.q.toUpperCase()) : qy.ilike('full_name', `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`)
   return qy
 }
@@ -117,7 +119,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
         <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
           {field('Tempat lahir', a.birth_place)}{field('Tanggal lahir', a.birth_date ? formatDate(a.birth_date) : null)}{field('Jenis kelamin', a.gender ? GENDER_LABEL[a.gender] : null)}
           {field('Email', a.email)}{field('Telepon', a.phone)}{field('Asal sekolah', a.previous_school)}{field('Tahun lulus', a.graduation_year)}
-          {field('Orang tua/wali', a.guardian_name)}{field('Telepon wali', a.guardian_phone)}
+          {field('Orang tua/wali', a.guardian_name)}{field('Telepon wali', a.guardian_phone)}{field('Jadwal perkuliahan', a.class_schedule ? classScheduleText(a.class_schedule) : null)}
         </dl>
         {a.address && <p className="mt-4 text-sm text-slate-700"><span className="text-xs font-semibold uppercase text-slate-400">Alamat: </span>{a.address}</p>}
       </div>
@@ -179,7 +181,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
 function Applicants() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [f, setF] = useState<Filters>({ q: '', status: '', periodId: '', programId: '' })
+  const [f, setF] = useState<Filters>({ q: '', status: '', periodId: '', programId: '', schedule: '' })
   const [exporting, setExporting] = useState(false)
   const set = (patch: Partial<Filters>) => { setF((p) => ({ ...p, ...patch })); setPage(1) }
 
@@ -214,10 +216,10 @@ function Applicants() {
       const log = await supabase.rpc('log_applicant_export', { p_count: all.length, p_filter: desc })
       if (log.error) throw log.error
 
-      const head = ['No. Pendaftaran', 'Nama', 'Program Studi', 'Periode', 'Status', 'Tempat Lahir', 'Tanggal Lahir', 'Jenis Kelamin', 'Email', 'Telepon', 'Alamat', 'Asal Sekolah', 'Tahun Lulus', 'Orang Tua/Wali', 'Telepon Wali', 'Tanggal Daftar']
+      const head = ['No. Pendaftaran', 'Nama', 'Program Studi', 'Periode', 'Jadwal Kuliah', 'Status', 'Tempat Lahir', 'Tanggal Lahir', 'Jenis Kelamin', 'Email', 'Telepon', 'Alamat', 'Asal Sekolah', 'Tahun Lulus', 'Orang Tua/Wali', 'Telepon Wali', 'Tanggal Daftar']
       const lines = [head.map(csvCell).join(',')]
       for (const r of all) {
-        lines.push([r.registration_no, r.full_name, r.program?.name, r.period?.name, APPLICANT_STATUS_LABEL[r.status] ?? r.status, r.birth_place, r.birth_date, r.gender ? GENDER_LABEL[r.gender] : '', r.email, r.phone, r.address, r.previous_school, r.graduation_year, r.guardian_name, r.guardian_phone, r.created_at].map(csvCell).join(','))
+        lines.push([r.registration_no, r.full_name, r.program?.name, r.period?.name, r.class_schedule ? CLASS_SCHEDULE_LABEL[r.class_schedule] : '', APPLICANT_STATUS_LABEL[r.status] ?? r.status, r.birth_place, r.birth_date, r.gender ? GENDER_LABEL[r.gender] : '', r.email, r.phone, r.address, r.previous_school, r.graduation_year, r.guardian_name, r.guardian_phone, r.created_at].map(csvCell).join(','))
       }
       const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
       const url = URL.createObjectURL(blob)
@@ -232,11 +234,12 @@ function Applicants() {
   const rows = list.data?.rows ?? []
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_12rem]">
+      <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_12rem_12rem]">
         <SearchBar value={f.q} onSearch={(v) => set({ q: v })} placeholder="Cari nama atau no. pendaftaran (PMB…)" />
         <FilterSelect label="Status" value={f.status} onChange={(v) => set({ status: v })} options={APPLICANT_STATUSES.map((s) => ({ value: s.value, label: s.label }))} />
         <FilterSelect label="Periode" value={f.periodId} onChange={(v) => set({ periodId: v })} options={(periods.data ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.academic_year})` }))} />
         <FilterSelect label="Program studi" value={f.programId} onChange={(v) => set({ programId: v })} options={(programs.data ?? []).map((p) => ({ value: p.id, label: p.name }))} />
+        <FilterSelect label="Jadwal kuliah" value={f.schedule} onChange={(v) => set({ schedule: v })} options={CLASS_SCHEDULES.map((s) => ({ value: s.value, label: `${s.label} (${s.time})` }))} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500">{list.data?.total ?? 0} pendaftar sesuai filter</p>
@@ -251,7 +254,7 @@ function Applicants() {
               {rows.map((r) => (
                 <tr key={r.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenId(r.id)}>
                   <td className="px-4 py-3"><button type="button" className="text-left font-medium text-emerald-800 hover:underline" onClick={(e) => { e.stopPropagation(); setOpenId(r.id) }}>{r.full_name}</button><p className="font-mono text-xs text-slate-400">{r.registration_no}</p></td>
-                  <td className="px-4 py-3">{r.program?.name ?? '—'}<p className="text-xs text-slate-400">{r.period?.name}</p></td>
+                  <td className="px-4 py-3">{r.program?.name ?? '—'}<p className="text-xs text-slate-400">{r.period?.name}{r.class_schedule ? ` · ${CLASS_SCHEDULE_LABEL[r.class_schedule]}` : ''}</p></td>
                   <td className="px-4 py-3"><Badge status={r.status} /></td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDateTime(r.created_at)}</td>
                 </tr>

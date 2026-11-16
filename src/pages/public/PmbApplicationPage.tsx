@@ -10,7 +10,7 @@ import { PageLoading } from '../../components/ui/Loading'
 import { QueryBoundary } from '../../components/ui/QueryBoundary'
 import { LoginPrompt } from '../../features/forum/LoginPrompt'
 import { ApplicantFields, type ApplicantValues } from '../../features/pmb/ApplicantFields'
-import { APPLICANT_STATUS_CLS, APPLICANT_STATUS_LABEL, EDITABLE_STATUSES } from '../../features/pmb/constants'
+import { APPLICANT_STATUS_CLS, APPLICANT_STATUS_LABEL, EDITABLE_STATUSES, classScheduleText } from '../../features/pmb/constants'
 import { DocumentsManager } from '../../features/pmb/DocumentsManager'
 import { NotFoundPage } from './NotFoundPage'
 import { useAuth } from '../../hooks/useAuth'
@@ -22,7 +22,7 @@ function toValues(a: Application): ApplicantValues {
   return {
     fullName: a.full_name, birthPlace: a.birth_place ?? '', birthDate: a.birth_date ?? '', gender: a.gender ?? '', email: a.email, phone: a.phone ?? '',
     address: a.address ?? '', previousSchool: a.previous_school ?? '', graduationYear: a.graduation_year ? String(a.graduation_year) : '',
-    guardianName: a.guardian_name ?? '', guardianPhone: a.guardian_phone ?? '',
+    guardianName: a.guardian_name ?? '', guardianPhone: a.guardian_phone ?? '', classSchedule: a.class_schedule ?? '',
   }
 }
 
@@ -62,6 +62,7 @@ export function PmbApplicationPage() {
             <header className="rounded-2xl border border-slate-200 bg-white p-6">
               <p className="font-mono text-sm text-slate-500">{a.registration_no}</p>
               <h1 className="mt-1 font-display text-2xl font-bold text-emerald-950">{a.program?.name} · {a.period?.name}</h1>
+              <p className="mt-1 text-sm text-slate-600">{classScheduleText(a.class_schedule)}</p>
               <p className="mt-3"><span className={`rounded-full px-3 py-1 text-sm font-semibold ${APPLICANT_STATUS_CLS[a.status] ?? ''}`}>{APPLICANT_STATUS_LABEL[a.status] ?? a.status}</span></p>
               {a.status === 'need_revision' && lastNote?.note && (
                 <div className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"><strong>Catatan petugas:</strong> {lastNote.note}</div>

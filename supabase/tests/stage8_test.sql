@@ -37,7 +37,7 @@ select pg_temp.cnt(null,'select 1 from public.study_programs',1,'saklar aktif: h
 -- ===== Pendaftaran =====
 do $$ declare r jsonb; begin
   perform pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');
-  r := public.submit_applicant('50000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000001','Peserta Satu','Kota',date '2006-05-05','male','p1@x.id','0811','Alamat','SMA 1',2024,null,null);
+  r := public.submit_applicant('50000000-0000-0000-0000-000000000001','60000000-0000-0000-0000-000000000001','Peserta Satu','Kota',date '2006-05-05','male','p1@x.id','0811','Alamat','SMA 1',2024,null,null,'night');
   reset role; perform set_config('t.app1', r->>'id', false);
   raise notice 'ok - login: daftar pada periode terbuka';
   perform pg_temp.act_as('00000000-0000-0000-0000-0000000000b1');

@@ -17,6 +17,7 @@
 | 0012_pmb_staff_rpc.sql | ubah status PMB + catatan; pencatatan ekspor |
 | 0013_recruitment_news_engagement.sql | pendaftaran pengurus DEMA + komentar & like berita |
 | 0014_staff_email_notifications.sql | notifikasi email ke staf (pg_net → fungsi Netlify → Resend) |
+| 0015_pmb_class_schedule.sql | pilihan jadwal kuliah pendaftar PMB (siang/malam), `submit_applicant` 14 argumen |
 
 Perubahan skema ke depan = berkas baru bernomor berikutnya. Jangan mengedit migrasi lama.
 

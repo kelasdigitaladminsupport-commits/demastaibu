@@ -12,3 +12,15 @@ export const APPLICANT_STATUS_CLS: Record<string, string> = Object.fromEntries(A
 /** Pendaftar hanya boleh mengubah data/dokumen pada status ini (ditegakkan juga oleh RLS). */
 export const EDITABLE_STATUSES = ['submitted', 'need_revision']
 export const GENDER_LABEL: Record<string, string> = { male: 'Laki-laki', female: 'Perempuan' }
+
+/** Jadwal perkuliahan yang dibuka kampus. Nilai 'day'/'night' disimpan di kolom applicants.class_schedule. */
+export const CLASS_SCHEDULES = [
+  { value: 'day', label: 'Kelas Siang', time: '14.00 – 18.00 WIB' },
+  { value: 'night', label: 'Kelas Malam', time: '18.00 – 21.00 WIB' },
+] as const
+export const CLASS_SCHEDULE_LABEL: Record<string, string> = Object.fromEntries(CLASS_SCHEDULES.map((s) => [s.value, s.label]))
+/** Label + jam, mis. "Kelas Siang (14.00 – 18.00 WIB)". Pendaftar lama tanpa pilihan -> '—'. */
+export const classScheduleText = (v: string | null | undefined) => {
+  const s = CLASS_SCHEDULES.find((x) => x.value === v)
+  return s ? `${s.label} (${s.time})` : '—'
+}

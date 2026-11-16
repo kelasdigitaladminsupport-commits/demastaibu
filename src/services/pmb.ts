@@ -12,6 +12,7 @@ export interface Application {
   full_name: string; birth_place: string | null; birth_date: string | null; gender: string | null
   email: string; phone: string | null; address: string | null; previous_school: string | null
   graduation_year: number | null; guardian_name: string | null; guardian_phone: string | null
+  class_schedule: string | null
   period: { name: string; academic_year: string } | null
   program: { name: string } | null
 }
@@ -21,9 +22,10 @@ export interface PmbTrack { registration_no: string; status: string; submitted_a
 export interface SubmitInput {
   periodId: string; programId: string; fullName: string; birthPlace: string; birthDate: string; gender: string
   email: string; phone: string; address: string; previousSchool: string; graduationYear: string; guardianName: string; guardianPhone: string
+  classSchedule: string
 }
 
-const APP_COLS = 'id, registration_no, status, created_at, period_id, program_id, full_name, birth_place, birth_date, gender, email, phone, address, previous_school, graduation_year, guardian_name, guardian_phone, period:pmb_periods(name, academic_year), program:study_programs(name)'
+const APP_COLS = 'id, registration_no, status, created_at, period_id, program_id, full_name, birth_place, birth_date, gender, email, phone, address, previous_school, graduation_year, guardian_name, guardian_phone, class_schedule, period:pmb_periods(name, academic_year), program:study_programs(name)'
 
 export function describePmbError(err: unknown): string {
   const m = (err as { message?: string })?.message ?? ''
@@ -32,6 +34,7 @@ export function describePmbError(err: unknown): string {
   if (/pmb_closed/.test(m)) return 'Pendaftaran belum dibuka.'
   if (/pmb_period_closed/.test(m)) return 'Periode pendaftaran sudah ditutup atau belum dimulai.'
   if (/invalid_program/.test(m)) return 'Program studi tidak tersedia.'
+  if (/invalid_schedule/.test(m)) return 'Pilih jadwal perkuliahan (siang atau malam).'
   if (/login_required/.test(m)) return 'Silakan masuk terlebih dahulu.'
   if (/account_banned/.test(m)) return 'Akun Anda dibatasi.'
   return 'Terjadi kesalahan. Periksa isian Anda lalu coba lagi.'
@@ -55,6 +58,7 @@ export async function submitApplicant(v: SubmitInput): Promise<{ id: string; reg
     p_email: v.email.trim(), p_phone: v.phone.trim() || null, p_address: v.address.trim() || null,
     p_previous_school: v.previousSchool.trim() || null, p_graduation_year: v.graduationYear ? Number(v.graduationYear) : null,
     p_guardian_name: v.guardianName.trim() || null, p_guardian_phone: v.guardianPhone.trim() || null,
+    p_class_schedule: v.classSchedule || null,
   })
   if (error) throw new Error(describePmbError(error))
   return data as { id: string; registration_no: string; tracking_code: string }
@@ -90,6 +94,7 @@ export async function updateMyApplication(id: string, v: Omit<SubmitInput, 'peri
     email: v.email.trim(), phone: v.phone.trim() || null, address: v.address.trim() || null,
     previous_school: v.previousSchool.trim() || null, graduation_year: v.graduationYear ? Number(v.graduationYear) : null,
     guardian_name: v.guardianName.trim() || null, guardian_phone: v.guardianPhone.trim() || null,
+    class_schedule: v.classSchedule || null,
   }).eq('id', id)
   if (error) throw error
 }
