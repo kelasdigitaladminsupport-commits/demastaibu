@@ -34,6 +34,25 @@ export async function signUp(fullName: string, email: string, password: string) 
   return { needsEmailConfirmation: !data.session }
 }
 
+/** Memverifikasi kode angka yang dikirim ke email saat mendaftar. Berhasil = langsung masuk (sesi dibuat). */
+export async function verifySignupCode(email: string, token: string) {
+  const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: token.trim(), type: 'signup' })
+  if (error) {
+    if (/rate limit|too many/i.test(error.message)) throw new Error(translateAuthError(error.message))
+    throw new Error('Kode salah atau sudah kedaluwarsa. Periksa kembali atau kirim ulang kode.')
+  }
+}
+
+/** Mengirim ulang kode verifikasi pendaftaran. */
+export async function resendSignupCode(email: string) {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email.trim(),
+    options: { emailRedirectTo: `${window.location.origin}/masuk` },
+  })
+  if (error) throw new Error(translateAuthError(error.message))
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut()
   if (error) throw new Error(translateAuthError(error.message))

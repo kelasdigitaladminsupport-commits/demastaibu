@@ -3,10 +3,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
-import { MailCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../components/ui/Button'
 import { Field, inputClass } from '../../components/ui/Field'
+import { EmailCodeForm } from '../../features/auth/EmailCodeForm'
 import { signUp } from '../../services/auth'
 import { emailSchema, passwordSchema } from '../../utils/validation'
 
@@ -36,16 +36,7 @@ export function RegisterPage() {
   }
 
   if (sentTo) {
-    return (
-      <div className="text-center">
-        <MailCheck className="mx-auto size-12 text-emerald-700" aria-hidden />
-        <h1 className="mt-4 font-display text-2xl font-bold text-emerald-950">Periksa email Anda</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Kami mengirim tautan verifikasi ke <strong>{sentTo}</strong>. Klik tautan tersebut, lalu masuk.
-        </p>
-        <Link to="/masuk" className="mt-6 inline-block text-sm font-semibold text-emerald-800 hover:underline">Ke halaman masuk</Link>
-      </div>
-    )
+    return <EmailCodeForm email={sentTo} onVerified={() => navigate('/', { replace: true })} onChangeEmail={() => setSentTo(null)} />
   }
 
   return (

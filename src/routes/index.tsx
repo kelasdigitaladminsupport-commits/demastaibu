@@ -13,6 +13,7 @@ import { LoginPage } from '../pages/auth/LoginPage'
 import { RegisterPage } from '../pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage'
+import { VerifyEmailPage } from '../pages/auth/VerifyEmailPage'
 import { DashboardPage } from '../pages/admin/DashboardPage'
 import { AdminModulePage } from '../pages/admin/AdminModulePage'
 import { ADMIN_MODULES } from '../utils/adminModules'
@@ -106,6 +107,7 @@ export const router = createBrowserRouter([
       { path: 'daftar', element: <RegisterPage /> },
       { path: 'lupa-password', element: <ForgotPasswordPage /> },
       { path: 'reset-password', element: <ResetPasswordPage /> },
+      { path: 'verifikasi-email', element: <VerifyEmailPage /> },
     ],
   },
   {

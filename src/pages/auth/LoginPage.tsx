@@ -27,7 +27,10 @@ export function LoginPage() {
       toast.success('Berhasil masuk.')
       navigate(from, { replace: true })
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Gagal masuk.')
+      const msg = e instanceof Error ? e.message : 'Gagal masuk.'
+      // Email belum diverifikasi: arahkan ke halaman kode verifikasi (kode baru dikirim di sana).
+      if (/belum diverifikasi/i.test(msg)) { toast.info('Email Anda belum diverifikasi. Masukkan kode verifikasi.'); navigate(`/verifikasi-email?email=${encodeURIComponent(v.email.trim())}`); return }
+      toast.error(msg)
     }
   }
 
