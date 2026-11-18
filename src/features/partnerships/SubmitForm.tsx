@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Field, inputClass } from '../../components/ui/Field'
 import { submitPartnership, uploadProposal } from '../../services/partnerships'
 import { COOPERATION_SUGGESTIONS, PARTNER_TYPES } from './constants'
+import { EmailVerification, type EmailProof } from './EmailVerification'
 
 interface Values {
   orgName: string; contactPerson: string; email: string; phone: string; partnerType: string; cooperationType: string
@@ -15,11 +16,19 @@ interface Values {
 export function SubmitForm({ onTrack }: { onTrack: (ref: string, email: string) => void }) {
   const [done, setDone] = useState<{ ref: string; email: string } | null>(null)
   const [file, setFile] = useState<File | null>(null)
+  const [proof, setProof] = useState<EmailProof | null>(null)
+  const [proofError, setProofError] = useState<string | undefined>()
   const fileRef = useRef<HTMLInputElement>(null)
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Values>({ defaultValues: { partnerType: 'sponsor', publishConsent: false } })
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<Values>({ defaultValues: { partnerType: 'sponsor', publishConsent: false } })
+
+  const emailValue = watch('email') ?? ''
 
   async function onSubmit(v: Values) {
     if (v.website) return // honeypot
+    if (!proof || proof.email !== v.email.trim().toLowerCase()) {
+      setProofError('Verifikasi email Anda terlebih dahulu dengan menekan tombol “Verifikasi email”.')
+      toast.error('Email belum diverifikasi.'); return
+    }
     try {
       const proposalPath = file ? await uploadProposal(file) : null
       const value = v.supportValue.trim() === '' ? null : Number(v.supportValue)
@@ -27,9 +36,14 @@ export function SubmitForm({ onTrack }: { onTrack: (ref: string, email: string) 
         orgName: v.orgName.trim(), contactPerson: v.contactPerson.trim(), email: v.email.trim(), phone: v.phone.trim(),
         partnerType: v.partnerType, cooperationType: v.cooperationType.trim(), supportedProgram: v.supportedProgram.trim(),
         supportForm: v.supportForm.trim(), supportValue: value, message: v.message.trim(), publishConsent: v.publishConsent, proposalPath,
+        emailProof: proof.token,
       })
-      setDone({ ref, email: v.email.trim() }); setFile(null); reset()
-    } catch (e) { toast.error(e instanceof Error ? e.message : 'Permohonan gagal dikirim.') }
+      setDone({ ref, email: v.email.trim() }); setFile(null); setProof(null); setProofError(undefined); reset()
+    } catch (e) {
+      const m = e instanceof Error ? e.message : 'Permohonan gagal dikirim.'
+      if (/verifikasi email/i.test(m)) setProof(null)   // bukti kedaluwarsa: verifikasi ulang
+      toast.error(m)
+    }
   }
 
   if (done) {
@@ -38,7 +52,7 @@ export function SubmitForm({ onTrack }: { onTrack: (ref: string, email: string) 
         <CheckCircle2 className="mx-auto size-12 text-emerald-700" aria-hidden />
         <h2 className="mt-3 font-display text-xl font-semibold text-emerald-950">Permohonan terkirim</h2>
         <p className="mt-1 text-sm text-slate-600">Simpan nomor referensi ini. Untuk melacak status Anda memerlukan nomor referensi <em>dan</em> email yang Anda isi.</p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">Kami mengirim email verifikasi ke <strong>{done.email}</strong>. Buka email itu dan tekan tombol verifikasi agar email konfirmasi dapat kami kirim (periksa folder spam bila belum terlihat).</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-slate-600">Email Anda sudah terverifikasi. Kami mengirim email konfirmasi ke <strong>{done.email}</strong> (periksa folder spam bila belum terlihat).</p>
         <p className="mx-auto mt-4 w-fit rounded-xl border-2 border-dashed border-emerald-600 bg-white px-6 py-3 font-mono text-2xl font-bold tracking-wider text-emerald-900">{done.ref}</p>
         <div className="mt-5 flex flex-wrap justify-center gap-3">
           <Button variant="outline" onClick={async () => { try { await navigator.clipboard.writeText(done.ref); toast.success('Nomor disalin.') } catch { toast.error('Gagal menyalin.') } }}><Copy className="size-4" /> Salin nomor</Button>
@@ -67,9 +81,13 @@ export function SubmitForm({ onTrack }: { onTrack: (ref: string, email: string) 
         <Field label="Narahubung *" htmlFor="contactPerson" error={errors.contactPerson?.message}>
           <input id="contactPerson" autoComplete="name" className={inputClass} {...register('contactPerson', { ...req, minLength: { value: 2, message: 'Minimal 2 karakter' }, maxLength: { value: 120, message: 'Maksimal 120 karakter' } })} />
         </Field>
-        <Field label="Email *" htmlFor="email" error={errors.email?.message}>
-          <input id="email" type="email" autoComplete="email" className={inputClass} {...register('email', { ...req, pattern: { value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/, message: 'Format email tidak valid' } })} />
-        </Field>
+        <div>
+          <Field label="Email *" htmlFor="email" error={errors.email?.message}>
+            <input id="email" type="email" autoComplete="email" readOnly={proof !== null} className={`${inputClass} ${proof ? 'bg-slate-50' : ''}`} {...register('email', { ...req, pattern: { value: /^[^@\s]+@[^@\s]+\.[^@\s]+$/, message: 'Format email tidak valid' } })} />
+          </Field>
+          <EmailVerification email={emailValue} proof={proof} error={proofError}
+            onVerified={(p) => { setProof(p); setProofError(undefined) }} onReset={() => setProof(null)} />
+        </div>
         <Field label="Telepon / WhatsApp" htmlFor="phone" error={errors.phone?.message}>
           <input id="phone" autoComplete="tel" className={inputClass} {...register('phone', { maxLength: { value: 30, message: 'Maksimal 30 karakter' } })} />
         </Field>

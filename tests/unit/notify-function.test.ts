@@ -73,3 +73,19 @@ describe('email perubahan status (kind=status_update)', () => {
     for (const [form, list] of cases) for (const status of list) expect((await call({ ...st, form, status })).status).toBe(200)
   })
 })
+
+describe('email kode OTP (kind=otp_email)', () => {
+  const otp = { kind: 'otp_email', form: 'partnership', code: '482913', recipients: ['mitra@x.id'] }
+  it('mengirim kode 6 digit ke satu penerima dengan peringatan jangan dibalas', async () => {
+    expect((await call(otp)).status).toBe(200)
+    const sent = JSON.parse(((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit).body as string)
+    expect(sent.to).toEqual(['mitra@x.id']); expect(sent.html).toContain('482913'); expect(sent.text).toContain('482913')
+    expect(sent.subject).not.toContain('482913'); expect(sent.text).toContain('tidak membalas')
+  })
+  it('menolak kode bukan 6 digit atau penerima ganda tanpa mengirim', async () => {
+    expect((await call({ ...otp, code: '12ab56' })).status).toBe(400)
+    expect((await call({ ...otp, code: '1234567' })).status).toBe(400)
+    expect((await call({ ...otp, recipients: ['a@x.id', 'b@x.id'] })).status).toBe(400)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})

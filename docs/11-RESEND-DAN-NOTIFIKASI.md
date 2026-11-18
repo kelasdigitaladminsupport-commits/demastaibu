@@ -89,3 +89,19 @@ Catatan:
 - Mengubah teks email: edit objek `STATUS_MAIL` di `netlify/functions/notify.mjs`, lalu deploy ulang.
 - Kolaborasi yang emailnya belum terverifikasi tidak dikirimi email status (mencegah email ke alamat orang lain). Status tetap dapat dilacak di halaman kolaborasi.
 - Uji: ubah status satu pendaftaran uji milik akun Anda sendiri, lalu periksa kotak masuk dan Netlify → Functions → `notify`.
+
+## G. Verifikasi email dengan kode OTP di formulir kolaborasi (migrasi 0022)
+Jalankan `supabase/migrations/0022_partnership_email_otp.sql` (setelah 0017 dan 0021), lalu **deploy ulang** situs (fungsi `notify` dan halaman baru). Tanpa konfigurasi tambahan: memakai Resend dan `private.notify_config` yang sama. **Wajib terisi**; bila belum, tombol verifikasi menampilkan "Layanan pengiriman kode belum tersedia".
+
+Alur di halaman Kolaborasi & Sponsorship:
+1. Pengaju mengisi email lalu menekan **Verifikasi email** (di bawah kolom email).
+2. Kode 6 digit dikirim ke email itu (berlaku **10 menit**, kirim ulang setelah 60 detik).
+3. Kode dimasukkan langsung di formulir. Bila benar, tampil **Email terverifikasi** dan kolom email terkunci (ada tombol *Ganti email*).
+4. Tombol **Kirim permohonan** baru diterima server bila email sudah terverifikasi; email konfirmasi langsung dikirim.
+
+Keamanan:
+- Verifikasi **wajib** dan ditegakkan di database: `submit_partnership` menolak pengajuan tanpa bukti verifikasi yang cocok dengan email (bukti berlaku 30 menit dan sekali pakai).
+- Kode dan bukti hanya disimpan sebagai hash di skema `private`. Maksimal 5 tebakan per kode, 5 kode per jam per email, jeda 60 detik, plus pembatasan per klien.
+- Semua pengajuan baru otomatis berstatus email terverifikasi, sehingga email status (bagian F) selalu terkirim.
+- Tautan verifikasi lama (migrasi 0017) tetap berfungsi untuk pengajuan yang sudah terkirim sebelum fitur ini.
+- Uji: buka `/kolaborasi`, isi email Anda, tekan *Verifikasi email*, masukkan kode, lalu kirim formulir. Coba juga kode salah dan kirim ulang kode.

@@ -5,6 +5,7 @@
 //   - ke STAF (default)           : hanya jenis + nomor referensi + tautan dasbor, tanpa data pribadi.
 //   - ke PENGIRIM (kind=confirmation): sapaan nama + jenis formulir + nomor referensi + tautan halaman publik.
 //   - VERIFIKASI email (kind=verify_email, kolaborasi anonim): tautan satu-kali; konfirmasi baru dikirim setelah terverifikasi.
+//   - KODE OTP (kind=otp_email, migrasi 0022): kode 6 digit untuk verifikasi email di dalam formulir kolaborasi.
 //   - PERUBAHAN STATUS (kind=status_update, migrasi 0021): dikirim ke pengaju saat admin mengubah status pengajuan.
 //     Hanya kunci form + status yang dikirim database; teks ditentukan di sini. Catatan admin (note) ditampilkan bila ada.
 import { timingSafeEqual } from 'node:crypto'
@@ -134,6 +135,22 @@ ${ref ? `<p style="margin:0 0 12px">Nomor referensi: <strong>${esc(ref)}</strong
 <p><a href="${esc(link)}" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${esc(f.cta)}</a></p>
 <p style="color:#64748b;font-size:12px;margin-top:24px">Email ini dikirim otomatis karena alamat Anda dipakai pada formulir DEMA STAI Bahriyatul Ulum. Jika Anda tidak merasa mengisinya, abaikan email ini.</p></div>`
     const text = `${f.title}\n\nAssalamu’alaikum${name ? `, ${name}` : ''}.\n${f.intro}\n${ref ? `Nomor referensi: ${ref}\n` : ''}${f.next}\n${f.cta}: ${link}\n\nEmail otomatis. Jika Anda tidak merasa mengisi formulir, abaikan email ini.`
+    return sendAll(env, to, subject, html, text)
+  }
+
+  // ---- Email kode OTP (verifikasi email di formulir kolaborasi) ----
+  if (body?.kind === 'otp_email') {
+    const code = String(body?.code ?? '')
+    if (!/^\d{6}$/.test(code) || to.length !== 1) return new Response('Bad request', { status: 400 })
+    const subject = '[DEMA STAI BU] Kode verifikasi email Anda'
+    const html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:480px">
+<h2 style="color:#064e3b;margin:0 0 12px">Kode Verifikasi Email</h2>
+<p style="margin:0 0 12px">Assalamu’alaikum.</p>
+<p style="margin:0 0 12px">Kami menerima permintaan verifikasi email pada formulir pengajuan kolaborasi atau sponsorship DEMA STAI Bahriyatul Ulum. Masukkan kode berikut pada formulir tersebut:</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:8px;margin:16px 0;color:#064e3b">${esc(code)}</p>
+<p style="margin:0 0 12px">Kode berlaku selama 10 menit dan hanya dapat digunakan satu kali. Demi keamanan, mohon tidak membagikan kode ini kepada siapa pun.</p>
+<p style="color:#64748b;font-size:12px;margin-top:24px">Email ini dikirim secara otomatis oleh sistem. Mohon untuk tidak membalas email ini. Apabila Anda tidak merasa melakukan permintaan tersebut, abaikan email ini.</p></div>`
+    const text = `Kode Verifikasi Email\n\nAssalamu’alaikum.\nKami menerima permintaan verifikasi email pada formulir pengajuan kolaborasi atau sponsorship DEMA STAI Bahriyatul Ulum. Masukkan kode berikut pada formulir tersebut:\n\n${code}\n\nKode berlaku selama 10 menit dan hanya dapat digunakan satu kali. Mohon tidak membagikan kode ini kepada siapa pun.\n\nEmail ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini. Apabila Anda tidak merasa melakukan permintaan tersebut, abaikan email ini.`
     return sendAll(env, to, subject, html, text)
   }
 

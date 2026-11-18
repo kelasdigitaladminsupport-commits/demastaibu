@@ -1,5 +1,5 @@
 -- stage7_test.sql | Uji kemitraan, sponsor, donasi, laporan, kontak, Storage proposal. Semua di-ROLLBACK.
--- Prasyarat: migrasi 0001-0011. Baris "ok - ..." = lulus.
+-- Prasyarat: migrasi 0001-0011 dan 0022 (submit_partnership wajib membawa bukti verifikasi email). Baris "ok - ..." = lulus.
 begin;
 create function pg_temp.act_as(_uid uuid) returns void language plpgsql as $$
 begin perform set_config('request.jwt.claims', case when _uid is null then '' else json_build_object('sub',_uid,'role','authenticated')::text end, true);
@@ -20,13 +20,28 @@ insert into auth.users(id,aud,role,email) values
 insert into public.user_roles(user_id,role) values ('00000000-0000-0000-0000-0000000000a1','admin'),('00000000-0000-0000-0000-0000000000a2','editor');
 
 -- ===== Kemitraan (RPC anonim) =====
+-- Bukti verifikasi email (hasil verify_partnership_email_code) disiapkan langsung untuk uji.
+insert into private.partnership_email_proofs(token_hash, email, expires_at)
+values (encode(extensions.digest(repeat('a',48),'sha256'),'hex'), 'budi@contoh.id', now() + interval '30 minutes');
 do $$ declare ref text; j jsonb; begin
   perform pg_temp.act_as(null);
-  ref := public.submit_partnership('PT Contoh Uji','Budi','Budi@Contoh.id','0812','sponsor','Sponsor kegiatan','Seminar','Dana',5000000,'Kami ingin mendukung kegiatan.',true,'incoming/abc.pdf');
+  -- tanpa bukti / bukti milik email lain ditolak
+  begin perform public.submit_partnership('PT Tanpa Bukti','Ani','ani@x.id',null,'umkm','Donasi',null,null,null,'Pesan uji kemitraan',false,null); reset role; raise exception 'FAIL: tanpa bukti diterima';
+  exception when others then reset role; if sqlerrm not like '%email_not_verified%' then raise; end if; raise notice 'ok - tanpa bukti verifikasi email ditolak'; end;
+  perform pg_temp.act_as(null);
+  begin perform public.submit_partnership('PT Email Lain','Ani','ani@x.id',null,'umkm','Donasi',null,null,null,'Pesan uji kemitraan',false,null,repeat('a',48)); reset role; raise exception 'FAIL: bukti email lain diterima';
+  exception when others then reset role; if sqlerrm not like '%email_not_verified%' then raise; end if; raise notice 'ok - bukti milik email lain ditolak'; end;
+  perform pg_temp.act_as(null);
+  ref := public.submit_partnership('PT Contoh Uji','Budi','Budi@Contoh.id','0812','sponsor','Sponsor kegiatan','Seminar','Dana',5000000,'Kami ingin mendukung kegiatan.',true,'incoming/abc.pdf',repeat('a',48));
   reset role;
   if ref is null or ref not like 'KRJ-%' then raise exception 'FAIL: nomor referensi %', ref; end if;
   raise notice 'ok - anon: ajukan kemitraan mendapat nomor referensi';
   perform set_config('t.ref', ref, false);
+  if not exists (select 1 from public.partnership_requests where reference_no = ref and email_verified_at is not null) then raise exception 'FAIL: email_verified_at kosong'; end if;
+  raise notice 'ok - pengajuan tersimpan dengan email terverifikasi';
+  perform pg_temp.act_as(null);
+  begin perform public.submit_partnership('PT Ulang','Budi','budi@contoh.id',null,'umkm','Donasi',null,null,null,'Pesan uji kemitraan',false,null,repeat('a',48)); reset role; raise exception 'FAIL: bukti dipakai dua kali';
+  exception when others then reset role; if sqlerrm not like '%email_not_verified%' then raise; end if; raise notice 'ok - bukti verifikasi hanya sekali pakai'; end;
   -- lacak: email beda huruf besar/kecil tetap cocok; email salah ditolak
   perform pg_temp.act_as(null); j := public.track_partnership(lower(ref), 'budi@contoh.ID'); reset role;
   if j is null or j->>'status' <> 'received' then raise exception 'FAIL: lacak gagal'; end if; raise notice 'ok - lacak dengan referensi + email (tidak peka huruf besar)';
@@ -34,7 +49,7 @@ do $$ declare ref text; j jsonb; begin
   if j is not null then raise exception 'FAIL: email salah tetap membuka data'; end if; raise notice 'ok - email salah => tidak ditemukan';
   -- path proposal di luar incoming/ ditolak
   perform pg_temp.act_as(null);
-  begin perform public.submit_partnership('PT Dua Uji','Ani','ani@x.id',null,'umkm','Donasi',null,null,null,'Pesan uji kemitraan',false,'../../rahasia.pdf'); reset role; raise exception 'FAIL: path berbahaya diterima';
+  begin perform public.submit_partnership('PT Dua Uji','Ani','ani@x.id',null,'umkm','Donasi',null,null,null,'Pesan uji kemitraan',false,'../../rahasia.pdf',repeat('a',48)); reset role; raise exception 'FAIL: path berbahaya diterima';
   exception when insufficient_privilege then reset role; raise notice 'ok - path proposal berbahaya ditolak'; end;
 end $$;
 select pg_temp.cnt(null, 'select 1 from public.partnership_requests', 0, 'anon: tabel permohonan tertutup');
