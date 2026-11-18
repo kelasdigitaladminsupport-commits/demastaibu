@@ -5,6 +5,8 @@
 //   - ke STAF (default)           : hanya jenis + nomor referensi + tautan dasbor, tanpa data pribadi.
 //   - ke PENGIRIM (kind=confirmation): sapaan nama + jenis formulir + nomor referensi + tautan halaman publik.
 //   - VERIFIKASI email (kind=verify_email, kolaborasi anonim): tautan satu-kali; konfirmasi baru dikirim setelah terverifikasi.
+//   - PERUBAHAN STATUS (kind=status_update, migrasi 0021): dikirim ke pengaju saat admin mengubah status pengajuan.
+//     Hanya kunci form + status yang dikirim database; teks ditentukan di sini. Catatan admin (note) ditampilkan bila ada.
 import { timingSafeEqual } from 'node:crypto'
 
 const EMAIL = /^[^@\s<>"]+@[^@\s<>"]+\.[^@\s<>"]+$/
@@ -30,6 +32,53 @@ const FORMS = {
     intro: 'Terima kasih, email Anda sudah terverifikasi. Pengajuan kolaborasi atau kerja sama Anda telah kami terima; tim DEMA akan meninjau dan menghubungi Anda melalui email ini.',
     next: 'Untuk melacak status, gunakan nomor referensi di atas bersama email ini di halaman kolaborasi.',
     path: '/kolaborasi', cta: 'Kunjungi halaman kolaborasi',
+  },
+}
+
+// Templat email perubahan status. Kunci: form -> status. Teks ditentukan di sini (bukan dari database).
+// Status yang tidak terdaftar di sini tidak mengirim email (mis. status awal).
+const STATUS_MAIL = {
+  pmb: {
+    form: 'Pendaftaran Mahasiswa Baru', path: '/pmb/status', cta: 'Cek status pendaftaran',
+    items: {
+      verifying: { label: 'Sedang diverifikasi', body: 'Berkas dan data pendaftaran Anda sedang dalam proses verifikasi oleh panitia. Mohon menunggu informasi selanjutnya dan memantau email Anda secara berkala.' },
+      need_revision: { label: 'Perlu perbaikan', body: 'Setelah kami periksa, data atau berkas pendaftaran Anda masih perlu diperbaiki. Mohon masuk ke akun Anda, lakukan perbaikan sesuai catatan panitia, kemudian kirim kembali.' },
+      verified: { label: 'Terverifikasi', body: 'Data dan berkas pendaftaran Anda telah dinyatakan lengkap dan terverifikasi. Hasil akhir seleksi akan kami informasikan melalui email ini.' },
+      accepted: { label: 'Diterima', body: 'Kami menyampaikan selamat. Anda dinyatakan diterima sebagai mahasiswa baru STAI Bahriyatul Ulum. Informasi tahap daftar ulang akan disampaikan oleh panitia.' },
+      rejected: { label: 'Tidak diterima', body: 'Mohon maaf, berdasarkan hasil seleksi panitia, pendaftaran Anda belum dapat kami terima. Kami menghargai minat dan usaha Anda.' },
+      withdrawn: { label: 'Mengundurkan diri', body: 'Pengunduran diri Anda dari proses pendaftaran mahasiswa baru telah kami catat.' },
+    },
+  },
+  recruitment: {
+    form: 'Pendaftaran Pengurus DEMA', path: '/rekrutmen/daftar', cta: 'Lihat pendaftaran saya',
+    items: {
+      reviewing: { label: 'Sedang ditinjau', body: 'Pendaftaran Anda sedang kami tinjau oleh tim rekrutmen. Mohon menunggu informasi selanjutnya dan memantau email Anda secara berkala.' },
+      interview: { label: 'Tahap wawancara', body: 'Anda dinyatakan lolos ke tahap wawancara. Jadwal dan ketentuan pelaksanaan akan disampaikan oleh tim rekrutmen; mohon pastikan Anda dapat dihubungi.' },
+      accepted: { label: 'Diterima', body: 'Kami menyampaikan selamat. Anda dinyatakan diterima sebagai pengurus DEMA STAI Bahriyatul Ulum. Arahan selanjutnya akan disampaikan oleh pengurus.' },
+      rejected: { label: 'Tidak diterima', body: 'Mohon maaf, berdasarkan hasil seleksi, Anda belum dapat kami terima sebagai pengurus pada periode ini. Kami berterima kasih atas partisipasi Anda.' },
+      withdrawn: { label: 'Mengundurkan diri', body: 'Pengunduran diri Anda dari proses pendaftaran pengurus telah kami catat.' },
+    },
+  },
+  partnership: {
+    form: 'Pengajuan Kolaborasi / Kerja Sama', path: '/kolaborasi', cta: 'Kunjungi halaman kolaborasi',
+    items: {
+      reviewed: { label: 'Sedang ditinjau', body: 'Pengajuan kerja sama Anda sedang kami tinjau. Mohon menunggu informasi selanjutnya dan memantau email Anda secara berkala.' },
+      discussing: { label: 'Dalam pembahasan', body: 'Pengajuan Anda telah memasuki tahap pembahasan. Perwakilan kami akan menghubungi Anda melalui alamat email ini untuk membicarakan tindak lanjutnya.' },
+      agreed: { label: 'Disetujui', body: 'Kami menyampaikan terima kasih. Pengajuan kerja sama Anda telah disetujui. Perwakilan kami akan menghubungi Anda untuk langkah berikutnya.' },
+      declined: { label: 'Tidak dilanjutkan', body: 'Mohon maaf, pengajuan kerja sama Anda belum dapat kami lanjutkan saat ini. Kami berterima kasih atas perhatian dan itikad baik Anda.' },
+      completed: { label: 'Selesai', body: 'Kerja sama yang Anda ajukan telah dinyatakan selesai. Kami mengucapkan terima kasih atas dukungan dan kerja sama yang telah terjalin.' },
+    },
+  },
+  aspiration: {
+    form: 'Aspirasi', path: '/aspirasi', cta: 'Lihat halaman aspirasi',
+    items: {
+      reviewed: { label: 'Sedang ditinjau', body: 'Aspirasi Anda sedang kami tinjau oleh pengurus. Mohon menunggu informasi selanjutnya.' },
+      need_info: { label: 'Membutuhkan informasi tambahan', body: 'Kami membutuhkan informasi tambahan terkait aspirasi Anda. Mohon periksa keterangan dari pengurus pada halaman aspirasi.' },
+      discussed: { label: 'Dibahas', body: 'Aspirasi Anda telah masuk ke dalam pembahasan pengurus.' },
+      in_progress: { label: 'Ditindaklanjuti', body: 'Aspirasi Anda sedang ditindaklanjuti oleh pengurus.' },
+      done: { label: 'Selesai', body: 'Aspirasi Anda telah selesai ditindaklanjuti. Terima kasih atas partisipasi Anda.' },
+      rejected: { label: 'Belum dapat ditindaklanjuti', body: 'Mohon maaf, aspirasi Anda belum dapat kami tindaklanjuti. Keterangan lengkap dapat dilihat pada halaman aspirasi.' },
+    },
   },
 }
 
@@ -85,6 +134,29 @@ ${ref ? `<p style="margin:0 0 12px">Nomor referensi: <strong>${esc(ref)}</strong
 <p><a href="${esc(link)}" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${esc(f.cta)}</a></p>
 <p style="color:#64748b;font-size:12px;margin-top:24px">Email ini dikirim otomatis karena alamat Anda dipakai pada formulir DEMA STAI Bahriyatul Ulum. Jika Anda tidak merasa mengisinya, abaikan email ini.</p></div>`
     const text = `${f.title}\n\nAssalamu’alaikum${name ? `, ${name}` : ''}.\n${f.intro}\n${ref ? `Nomor referensi: ${ref}\n` : ''}${f.next}\n${f.cta}: ${link}\n\nEmail otomatis. Jika Anda tidak merasa mengisi formulir, abaikan email ini.`
+    return sendAll(env, to, subject, html, text)
+  }
+
+  // ---- Email perubahan status ke pengaju ----
+  if (body?.kind === 'status_update') {
+    const f = STATUS_MAIL[String(body?.form ?? '')]
+    const st = f?.items[String(body?.status ?? '')]
+    if (!f || !st || to.length !== 1) return new Response('Bad request', { status: 400 })
+    const name = String(body?.name ?? '').replace(/[\r\n]+/g, ' ').trim().slice(0, 100)
+    const note = String(body?.note ?? '').replace(/\r/g, '').trim().slice(0, 1000)
+    const link = `${site}${f.path}`
+    const subject = `[DEMA STAI BU] Pembaruan status ${f.form}: ${st.label}${ref ? ` (${ref})` : ''}`
+    const html = `<div style="font-family:Segoe UI,Arial,sans-serif;max-width:520px">
+<h2 style="color:#064e3b;margin:0 0 12px">Pembaruan Status ${esc(f.form)}</h2>
+<p style="margin:0 0 12px">Assalamu’alaikum${name ? `, <strong>${esc(name)}</strong>` : ''}.</p>
+${ref ? `<p style="margin:0 0 12px">Nomor referensi: <strong>${esc(ref)}</strong></p>` : ''}
+<p style="margin:0 0 12px">Status terbaru: <strong>${esc(st.label)}</strong></p>
+<p style="margin:0 0 12px">${esc(st.body)}</p>
+${note ? `<p style="margin:0 0 12px;padding:10px 14px;background:#f0fdf4;border-left:3px solid #047857;white-space:pre-line"><strong>Catatan dari pengurus:</strong><br>${esc(note)}</p>` : ''}
+<p style="margin:0 0 16px">Hormat kami,<br>DEMA STAI Bahriyatul Ulum</p>
+<p><a href="${esc(link)}" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${esc(f.cta)}</a></p>
+<p style="color:#64748b;font-size:12px;margin-top:24px">Email ini dikirim secara otomatis oleh sistem. Mohon untuk tidak membalas email ini. Apabila Anda tidak merasa mengajukan permohonan tersebut, abaikan email ini.</p></div>`
+    const text = `Pembaruan Status ${f.form}\n\nAssalamu’alaikum${name ? `, ${name}` : ''}.\n${ref ? `Nomor referensi: ${ref}\n` : ''}Status terbaru: ${st.label}\n\n${st.body}\n${note ? `\nCatatan dari pengurus:\n${note}\n` : ''}\nHormat kami,\nDEMA STAI Bahriyatul Ulum\n\n${f.cta}: ${link}\n\nEmail ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini. Apabila Anda tidak merasa mengajukan permohonan tersebut, abaikan email ini.`
     return sendAll(env, to, subject, html, text)
   }
 

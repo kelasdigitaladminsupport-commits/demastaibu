@@ -70,3 +70,22 @@ Catatan:
 - Di dasbor admin (Kolaborasi), email pengaju diberi lencana **Terverifikasi / Belum terverifikasi**. Pengajuan yang belum terverifikasi tetap masuk ke daftar dan staf tetap diberi notifikasi; hanya saja alamat emailnya belum terbukti milik pengaju.
 - Penting: Supabase Auth harus mewajibkan konfirmasi email (Authentication → Providers → Email → *Confirm email* aktif), agar email akun PMB/pengurus benar-benar terverifikasi.
 - Bila `private.notify_config` belum diisi, tidak ada email verifikasi/konfirmasi yang dikirim.
+
+## F. Email otomatis saat status berubah (migrasi 0021)
+Jalankan `supabase/migrations/0021_status_change_emails.sql` (setelah 0014, 0017, dan 0020), lalu **deploy ulang** situs agar fungsi `notify` versi baru aktif. Tidak ada variabel atau konfigurasi baru: memakai Resend dan `private.notify_config` yang sama.
+
+Setiap kali Super Admin/Admin/petugas mengubah status, pengaju otomatis menerima email formal berisi status terbaru, nomor referensi, catatan dari pengurus (bila diisi), dan tautan ke halaman terkait. Email memuat pesan agar tidak dibalas karena dikirim otomatis.
+
+| Pengajuan | Status yang memicu email | Dikirim ke |
+|---|---|---|
+| PMB | Sedang diverifikasi, Perlu perbaikan, Terverifikasi, Diterima, Tidak diterima, Mengundurkan diri | Email akun yang sudah terkonfirmasi |
+| Pendaftaran pengurus | Sedang ditinjau, Tahap wawancara, Diterima, Tidak diterima, Mengundurkan diri | Email akun yang sudah terkonfirmasi |
+| Kolaborasi / sponsorship | Ditinjau, Dalam pembahasan, Disetujui, Tidak dilanjutkan, Selesai | Email di formulir, **hanya bila sudah terverifikasi** (bagian E) |
+| Aspirasi | Ditinjau, Butuh info, Dibahas, Ditindaklanjuti, Selesai, Belum dapat ditindaklanjuti | Email akun, hanya aspirasi **non-anonim** |
+
+Catatan:
+- Status awal (Terkirim/Diterima pada kolaborasi) tidak memicu email karena konfirmasi pengiriman sudah ada.
+- Catatan untuk pendaftar PMB diambil dari kolom *Catatan untuk pendaftar* pada form ubah status; untuk pengurus dari *note_public*; untuk aspirasi dari *tanggapan publik*.
+- Mengubah teks email: edit objek `STATUS_MAIL` di `netlify/functions/notify.mjs`, lalu deploy ulang.
+- Kolaborasi yang emailnya belum terverifikasi tidak dikirimi email status (mencegah email ke alamat orang lain). Status tetap dapat dilacak di halaman kolaborasi.
+- Uji: ubah status satu pendaftaran uji milik akun Anda sendiri, lalu periksa kotak masuk dan Netlify → Functions → `notify`.

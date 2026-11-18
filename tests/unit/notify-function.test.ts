@@ -40,3 +40,36 @@ describe('fungsi notify', () => {
     expect((await call({ ...payload, recipients: ['x'] })).status).toBe(400)
   })
 })
+
+describe('email perubahan status (kind=status_update)', () => {
+  const st = { kind: 'status_update', form: 'pmb', status: 'verifying', ref: 'PMB-123', name: 'Siti', recipients: ['siti@x.id'] }
+  const sentOf = () => JSON.parse(((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit).body as string)
+  it('mengirim email formal ke satu penerima dengan nomor referensi dan peringatan jangan dibalas', async () => {
+    expect((await call(st)).status).toBe(200)
+    const sent = sentOf()
+    expect(sent.to).toEqual(['siti@x.id'])
+    expect(sent.subject).toBe('[DEMA STAI BU] Pembaruan status Pendaftaran Mahasiswa Baru: Sedang diverifikasi (PMB-123)')
+    expect(sent.html).toContain('Siti'); expect(sent.html).toContain('PMB-123'); expect(sent.html).toContain('https://dema.netlify.app/pmb/status')
+    expect(sent.text).toContain('tidak membalas')
+  })
+  it('menampilkan catatan admin dengan HTML ter-escape', async () => {
+    await call({ ...st, status: 'need_revision', note: '<script>x</script> Unggah ulang KTP' })
+    const sent = sentOf()
+    expect(sent.html).toContain('Unggah ulang KTP'); expect(sent.html).not.toContain('<script>')
+  })
+  it('menolak form/status tak dikenal atau penerima ganda tanpa mengirim', async () => {
+    expect((await call({ ...st, status: 'submitted' })).status).toBe(400)
+    expect((await call({ ...st, form: 'lain' })).status).toBe(400)
+    expect((await call({ ...st, recipients: ['a@x.id', 'b@x.id'] })).status).toBe(400)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+  it('semua form punya templat untuk status yang bisa dipilih admin', async () => {
+    const cases: [string, string[]][] = [
+      ['pmb', ['verifying', 'need_revision', 'verified', 'accepted', 'rejected', 'withdrawn']],
+      ['recruitment', ['reviewing', 'interview', 'accepted', 'rejected', 'withdrawn']],
+      ['partnership', ['reviewed', 'discussing', 'agreed', 'declined', 'completed']],
+      ['aspiration', ['reviewed', 'need_info', 'discussed', 'in_progress', 'done', 'rejected']],
+    ]
+    for (const [form, list] of cases) for (const status of list) expect((await call({ ...st, form, status })).status).toBe(200)
+  })
+})
