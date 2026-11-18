@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase'
 
 const MESSAGES: Array<[RegExp, string]> = [
-  [/invalid login credentials/i, 'Email atau kata sandi salah.'],
-  [/email not confirmed/i, 'Email belum diverifikasi. Periksa kotak masuk Anda.'],
+  [/invalid login credentials/i, 'Email atau kata sandi salah, atau akun tidak ditemukan.'],
+  [/email not confirmed/i, 'Email belum diverifikasi. Masukkan kode verifikasi dari email Anda.'],
   [/user already registered/i, 'Email ini sudah terdaftar. Silakan masuk.'],
   [/password should be at least/i, 'Kata sandi terlalu pendek.'],
   [/not authorized/i, 'Layanan email verifikasi belum siap. Silakan hubungi pengelola website.'],

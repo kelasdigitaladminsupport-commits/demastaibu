@@ -70,6 +70,7 @@ export function EmailCodeForm({ email, onVerified, sendOnMount = false, onChange
         <p className="mt-2 text-sm text-slate-600">
           Kami mengirim kode angka ke <strong>{email}</strong>. Buka email itu lalu masukkan kodenya di bawah. Periksa folder spam bila belum terlihat.
         </p>
+        <p className="mt-2 text-xs text-slate-500">Akun yang tidak diverifikasi dalam 24 jam akan dihapus otomatis dan perlu didaftarkan ulang.</p>
       </div>
       <div className="text-left">
         <Field label="Kode verifikasi" htmlFor="otp" error={error ?? undefined}>

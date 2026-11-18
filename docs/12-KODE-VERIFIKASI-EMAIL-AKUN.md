@@ -45,3 +45,18 @@ kode saja (tautan di email bisa "terpakai" lebih dulu oleh pemindai email).
 - Daftar dengan email yang SUDAH terdaftar tidak membocorkan keberadaan akun: Supabase mengembalikan
   respons yang sama, sehingga kode tidak akan datang. Pengguna diarahkan memakai "Lupa kata sandi".
 - Tidak ada perubahan database untuk fitur ini.
+
+## 4. Hapus otomatis akun yang tidak diverifikasi 24 jam (migrasi 0019)
+1. Aktifkan **pg_cron**: Supabase Dashboard -> Integrations -> **Cron** (atau Database -> Extensions -> `pg_cron`).
+2. Jalankan `supabase/migrations/0019_purge_unverified_users.sql` di SQL Editor.
+3. Pekerjaan `purge-unverified-users` berjalan **tiap jam (menit ke-15)** dan menghapus akun yang emailnya belum
+   terverifikasi lebih dari 24 jam sejak dibuat. Dilindungi: akun yang sudah pernah masuk, akun ber-role staf,
+   dan akun non-email (mis. Google).
+4. Setelah dihapus, mencoba masuk menampilkan *"Email atau kata sandi salah, atau akun tidak ditemukan."*
+   dan email itu bisa dipakai mendaftar lagi. Karena penghapusan berjalan per jam, akun bisa bertahan
+   sampai sekitar 25 jam; selama belum terhapus, masuk akan diarahkan ke halaman kode verifikasi.
+
+Cek jadwal dan riwayat: `select jobid, jobname, schedule, active from cron.job;`
+`select status, return_message, start_time from cron.job_run_details order by start_time desc limit 5;`
+Uji manual (menghapus SEMUA akun belum terverifikasi sekarang, kecuali akun terlindung):
+`select private.purge_unverified_users(0);`  -- lihat dulu: `select email, created_at from auth.users where email_confirmed_at is null;`
