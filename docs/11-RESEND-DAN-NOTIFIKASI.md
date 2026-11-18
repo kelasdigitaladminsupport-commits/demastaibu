@@ -105,3 +105,20 @@ Keamanan:
 - Semua pengajuan baru otomatis berstatus email terverifikasi, sehingga email status (bagian F) selalu terkirim.
 - Tautan verifikasi lama (migrasi 0017) tetap berfungsi untuk pengajuan yang sudah terkirim sebelum fitur ini.
 - Uji: buka `/kolaborasi`, isi email Anda, tekan *Verifikasi email*, masukkan kode, lalu kirim formulir. Coba juga kode salah dan kirim ulang kode.
+
+## H. Email konfirmasi otomatis saat formulir dikirim (migrasi 0023)
+Jalankan `supabase/migrations/0023_submission_confirmation_emails.sql` (setelah 0017 dan 0021), lalu **deploy ulang** situs agar teks email baru aktif. Tanpa konfigurasi tambahan.
+
+Setiap kali formulir terkirim, pengaju menerima email ucapan terima kasih yang formal berisi nomor referensi dan tautan ke halaman terkait. Email memuat pesan agar tidak dibalas.
+
+| Formulir | Dikirim ke | Keterangan |
+|---|---|---|
+| PMB | Email akun terkonfirmasi | Kode Pelacakan tidak dikirim lewat email (alasan keamanan) |
+| Pendaftaran pengurus | Email akun terkonfirmasi | |
+| Kolaborasi / sponsorship | Email di formulir (sudah diverifikasi OTP) | Dikirim oleh `submit_partnership` |
+| Aspirasi | Email akun, hanya aspirasi **non-anonim** | Aspirasi anonim tidak dikirimi email |
+| Pesan Kontak | tidak dikirim | Formulir tanpa login dan emailnya belum terverifikasi; mengirim ke sana dapat disalahgunakan |
+
+- Mengubah kata-kata: edit objek `FORMS` di `netlify/functions/notify.mjs`, lalu deploy ulang.
+- Cek tidak ada trigger ganda (harus satu per tabel):
+  `select tgrelid::regclass, tgname from pg_trigger where tgname = 'notify_submitter';`

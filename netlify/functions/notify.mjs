@@ -3,7 +3,7 @@
 // Variabel Netlify: NOTIFY_WEBHOOK_SECRET, RESEND_API_KEY, RESEND_FROM_EMAIL (mis. "DEMA <notifikasi@domain-anda.id>").
 // Dua jenis email:
 //   - ke STAF (default)           : hanya jenis + nomor referensi + tautan dasbor, tanpa data pribadi.
-//   - ke PENGIRIM (kind=confirmation): sapaan nama + jenis formulir + nomor referensi + tautan halaman publik.
+//   - ke PENGIRIM (kind=confirmation): ucapan terima kasih formal + nama + nomor referensi + tautan halaman publik (pmb, recruitment, partnership, aspiration).
 //   - VERIFIKASI email (kind=verify_email, kolaborasi anonim): tautan satu-kali; konfirmasi baru dikirim setelah terverifikasi.
 //   - KODE OTP (kind=otp_email, migrasi 0022): kode 6 digit untuk verifikasi email di dalam formulir kolaborasi.
 //   - PERUBAHAN STATUS (kind=status_update, migrasi 0021): dikirim ke pengaju saat admin mengubah status pengajuan.
@@ -17,22 +17,28 @@ const PATH = /^\/admin\/[a-z-]+$/
 // Teks konfirmasi ditentukan di sini (bukan dari database) agar isi email tidak bisa dimanipulasi.
 const FORMS = {
   pmb: {
-    title: 'Pendaftaran Mahasiswa Baru diterima',
-    intro: 'Pendaftaran mahasiswa baru Anda telah kami terima dan akan ditinjau oleh panitia PMB.',
-    next: 'Simpan Kode Pelacakan yang tampil di layar setelah Anda mengirim formulir. Kode itu tidak dikirim lewat email demi keamanan dan dibutuhkan untuk memeriksa status pendaftaran.',
+    title: 'Pendaftaran Mahasiswa Baru Telah Kami Terima',
+    intro: 'Terima kasih telah mendaftar sebagai calon mahasiswa baru STAI Bahriyatul Ulum. Pendaftaran Anda telah kami terima dan saat ini sedang diproses oleh panitia penerimaan mahasiswa baru.',
+    next: 'Mohon simpan Kode Pelacakan yang ditampilkan di layar setelah formulir dikirim. Demi keamanan, kode tersebut tidak dikirim melalui email dan diperlukan untuk memeriksa status pendaftaran. Perkembangan proses akan kami sampaikan melalui email ini, sehingga mohon memantau email Anda secara berkala.',
     path: '/pmb/status', cta: 'Cek status pendaftaran',
   },
   recruitment: {
-    title: 'Pendaftaran pengurus DEMA diterima',
-    intro: 'Pendaftaran kepengurusan DEMA Anda telah kami terima dan akan diseleksi oleh tim rekrutmen.',
-    next: 'Anda akan dihubungi bila ada tahap lanjutan. Pantau status pendaftaran dengan masuk ke akun Anda.',
+    title: 'Pendaftaran Pengurus DEMA Telah Kami Terima',
+    intro: 'Terima kasih atas minat Anda untuk bergabung dalam kepengurusan DEMA STAI Bahriyatul Ulum. Pendaftaran Anda telah kami terima dan saat ini sedang diproses oleh tim rekrutmen.',
+    next: 'Informasi mengenai tahap selanjutnya akan kami sampaikan melalui email ini. Anda juga dapat memantau status pendaftaran dengan masuk ke akun Anda.',
     path: '/rekrutmen/daftar', cta: 'Lihat pendaftaran saya',
   },
   partnership: {
-    title: 'Pengajuan kolaborasi / kerja sama diterima',
-    intro: 'Terima kasih, email Anda sudah terverifikasi. Pengajuan kolaborasi atau kerja sama Anda telah kami terima; tim DEMA akan meninjau dan menghubungi Anda melalui email ini.',
-    next: 'Untuk melacak status, gunakan nomor referensi di atas bersama email ini di halaman kolaborasi.',
+    title: 'Pengajuan Kolaborasi Telah Kami Terima',
+    intro: 'Terima kasih atas minat Anda untuk bermitra dengan DEMA STAI Bahriyatul Ulum. Pengajuan kolaborasi atau kerja sama Anda telah kami terima dan saat ini sedang diproses oleh pengurus.',
+    next: 'Untuk memantau status, gunakan nomor referensi di atas bersama alamat email ini pada halaman kolaborasi. Tindak lanjut akan kami sampaikan melalui email ini.',
     path: '/kolaborasi', cta: 'Kunjungi halaman kolaborasi',
+  },
+  aspiration: {
+    title: 'Aspirasi Anda Telah Kami Terima',
+    intro: 'Terima kasih telah menyampaikan aspirasi kepada DEMA STAI Bahriyatul Ulum. Aspirasi Anda telah kami terima dan akan segera ditinjau oleh pengurus.',
+    next: 'Simpan nomor referensi di atas untuk melacak perkembangan aspirasi Anda pada halaman aspirasi.',
+    path: '/aspirasi', cta: 'Lacak aspirasi',
   },
 }
 
@@ -131,10 +137,11 @@ export default async (req) => {
 <p style="margin:0 0 12px">Assalamu’alaikum${name ? `, <strong>${esc(name)}</strong>` : ''}.</p>
 <p style="margin:0 0 12px">${esc(f.intro)}</p>
 ${ref ? `<p style="margin:0 0 12px">Nomor referensi: <strong>${esc(ref)}</strong></p>` : ''}
-<p style="margin:0 0 16px">${esc(f.next)}</p>
+<p style="margin:0 0 12px">${esc(f.next)}</p>
+<p style="margin:0 0 16px">Hormat kami,<br>DEMA STAI Bahriyatul Ulum</p>
 <p><a href="${esc(link)}" style="background:#047857;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:600">${esc(f.cta)}</a></p>
-<p style="color:#64748b;font-size:12px;margin-top:24px">Email ini dikirim otomatis karena alamat Anda dipakai pada formulir DEMA STAI Bahriyatul Ulum. Jika Anda tidak merasa mengisinya, abaikan email ini.</p></div>`
-    const text = `${f.title}\n\nAssalamu’alaikum${name ? `, ${name}` : ''}.\n${f.intro}\n${ref ? `Nomor referensi: ${ref}\n` : ''}${f.next}\n${f.cta}: ${link}\n\nEmail otomatis. Jika Anda tidak merasa mengisi formulir, abaikan email ini.`
+<p style="color:#64748b;font-size:12px;margin-top:24px">Email ini dikirim secara otomatis oleh sistem. Mohon untuk tidak membalas email ini. Apabila Anda tidak merasa mengisi formulir tersebut, abaikan email ini.</p></div>`
+    const text = `${f.title}\n\nAssalamu’alaikum${name ? `, ${name}` : ''}.\n${f.intro}\n${ref ? `Nomor referensi: ${ref}\n` : ''}\n${f.next}\n\nHormat kami,\nDEMA STAI Bahriyatul Ulum\n\n${f.cta}: ${link}\n\nEmail ini dikirim secara otomatis oleh sistem. Mohon tidak membalas email ini. Apabila Anda tidak merasa mengisi formulir tersebut, abaikan email ini.`
     return sendAll(env, to, subject, html, text)
   }
 

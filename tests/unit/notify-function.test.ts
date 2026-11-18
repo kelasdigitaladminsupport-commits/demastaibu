@@ -89,3 +89,20 @@ describe('email kode OTP (kind=otp_email)', () => {
     expect(fetch).not.toHaveBeenCalled()
   })
 })
+
+describe('email konfirmasi pengiriman formulir (kind=confirmation)', () => {
+  const sentOf = () => JSON.parse(((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit).body as string)
+  it.each(['pmb', 'recruitment', 'partnership', 'aspiration'])('formulir %s: ucapan terima kasih formal, nomor referensi, dan jangan dibalas', async (form) => {
+    const res = await call({ kind: 'confirmation', form, ref: 'REF-1', name: 'Siti', recipients: ['siti@x.id'] })
+    expect(res.status).toBe(200)
+    const sent = sentOf()
+    expect(sent.to).toEqual(['siti@x.id']); expect(sent.subject).toContain('Telah Kami Terima'); expect(sent.subject).toContain('REF-1')
+    expect(sent.html).toContain('Terima kasih'); expect(sent.html).toContain('Siti'); expect(sent.html).toContain('REF-1')
+    expect(sent.text).toContain('tidak membalas')
+  })
+  it('menolak form tak dikenal atau lebih dari satu penerima', async () => {
+    expect((await call({ kind: 'confirmation', form: 'lain', recipients: ['a@x.id'] })).status).toBe(400)
+    expect((await call({ kind: 'confirmation', form: 'pmb', recipients: ['a@x.id', 'b@x.id'] })).status).toBe(400)
+    expect(fetch).not.toHaveBeenCalled()
+  })
+})

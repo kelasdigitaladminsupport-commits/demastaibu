@@ -23,6 +23,7 @@
 | 0020_recruitment_positions.sql | dua jalur pendaftaran pengurus: Ketua/Wakil Ketua (visi-misi, program kerja) vs Koordinator Bidang/Anggota (pilih bidang); `submit_recruitment` 15 argumen |
 | 0021_status_change_emails.sql | email otomatis ke pengaju saat status PMB / pengurus / kolaborasi / aspirasi berubah (`notify_status_change`) |
 | 0022_partnership_email_otp.sql | verifikasi email kolaborasi dengan kode OTP di dalam formulir; `submit_partnership` 13 argumen (wajib bukti verifikasi) |
+| 0023_submission_confirmation_emails.sql | email konfirmasi otomatis saat PMB / pendaftaran pengurus / aspirasi (login) dikirim; teks formal di `notify.mjs` |
 
 Perubahan skema ke depan = berkas baru bernomor berikutnya. Jangan mengedit migrasi lama.
 
