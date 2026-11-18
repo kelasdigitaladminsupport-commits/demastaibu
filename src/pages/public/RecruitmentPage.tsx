@@ -33,6 +33,7 @@ export function RecruitmentPage() {
           {periods.map((p) => {
             const state = windowState(p.start_date, p.end_date)
             const reqs = splitRequirements(p.requirements)
+            const leaderReqs = splitRequirements(p.leadership_requirements)
             const badge = WINDOW_BADGE[state]
             return (
               <section key={p.id} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
@@ -49,8 +50,16 @@ export function RecruitmentPage() {
 
                 {p.description && <TextContent text={p.description} />}
 
+                <div className="rounded-xl bg-emerald-50 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-emerald-900">Dua jalur pendaftaran</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5">
+                    <li><strong>Ketua dan Wakil Ketua DEMA:</strong> melampirkan visi-misi, program kerja, dan pengalaman organisasi.</li>
+                    <li><strong>Koordinator Bidang dan Anggota:</strong> memilih bidang yang diminati.</li>
+                  </ul>
+                </div>
+
                 <div>
-                  <h3 className="font-display text-lg font-semibold text-emerald-900">Persyaratan pendaftaran</h3>
+                  <h3 className="font-display text-lg font-semibold text-emerald-900">{leaderReqs.length > 0 ? 'Persyaratan Koordinator Bidang & Anggota' : 'Persyaratan pendaftaran'}</h3>
                   {reqs.length > 0 ? (
                     <ol className="mt-3 space-y-2">
                       {reqs.map((r, i) => (
@@ -64,6 +73,17 @@ export function RecruitmentPage() {
                     <p className="mt-2 text-sm text-slate-600">Persyaratan mengacu pada Pedoman Kemahasiswaan{p.guideline_path ? ' pada dokumen di bawah' : ''}.</p>
                   )}
                 </div>
+
+                {leaderReqs.length > 0 && (
+                  <div>
+                    <h3 className="font-display text-lg font-semibold text-emerald-900">Persyaratan Ketua & Wakil Ketua DEMA</h3>
+                    <ol className="mt-3 space-y-2">
+                      {leaderReqs.map((r, i) => (
+                        <li key={i} className="flex gap-3 text-sm text-slate-700"><CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600" aria-hidden /><span>{r}</span></li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
 
                 {p.schedule && (<div><h3 className="font-display text-lg font-semibold text-emerald-900">Jadwal</h3><TextContent text={p.schedule} className="mt-2" /></div>)}
 

@@ -20,6 +20,7 @@
 | 0015_pmb_class_schedule.sql | pilihan jadwal kuliah pendaftar PMB (siang/malam), `submit_applicant` 14 argumen |
 | 0016_notifications_and_confirmations.sql | lonceng notifikasi staf (tabel notifications) + email konfirmasi ke pengirim formulir |
 | 0017_email_verification.sql | verifikasi email kolaborasi (token sekali pakai); konfirmasi PMB/pengurus ke email akun terverifikasi |
+| 0020_recruitment_positions.sql | dua jalur pendaftaran pengurus: Ketua/Wakil Ketua (visi-misi, program kerja) vs Koordinator Bidang/Anggota (pilih bidang); `submit_recruitment` 15 argumen |
 
 Perubahan skema ke depan = berkas baru bernomor berikutnya. Jangan mengedit migrasi lama.
 

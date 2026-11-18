@@ -13,7 +13,7 @@ import { Field, inputClass } from '../../components/ui/Field'
 import { PageLoading } from '../../components/ui/Loading'
 import { LoginPrompt } from '../../features/forum/LoginPrompt'
 import { GuidelineViewer } from '../../features/recruitment/GuidelineViewer'
-import { RECRUIT_STATUS_CLS, RECRUIT_STATUS_LABEL, WITHDRAWABLE, splitRequirements, windowState } from '../../features/recruitment/constants'
+import { POSITIONS, POSITION_LABEL, RECRUIT_STATUS_CLS, RECRUIT_STATUS_LABEL, WITHDRAWABLE, isLeadership, splitRequirements, windowState } from '../../features/recruitment/constants'
 import { useAuth } from '../../hooks/useAuth'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import {
@@ -35,11 +35,18 @@ function StatusCard({ a, onWithdraw }: { a: RecruitmentApplication; onWithdraw: 
         <span className="text-sm text-slate-600">{a.period?.name} ({a.period?.academic_year})</span>
       </p>
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-        <div><dt className="text-xs font-semibold uppercase text-slate-400">Pilihan bidang 1</dt><dd>{a.first_department?.name ?? '—'}</dd></div>
-        <div><dt className="text-xs font-semibold uppercase text-slate-400">Pilihan bidang 2</dt><dd>{a.second_department?.name ?? '—'}</dd></div>
+        <div><dt className="text-xs font-semibold uppercase text-slate-400">Posisi yang dilamar</dt><dd className="font-semibold">{POSITION_LABEL[a.position] ?? a.position}</dd></div>
+        {!isLeadership(a.position) && <div><dt className="text-xs font-semibold uppercase text-slate-400">Pilihan bidang 1</dt><dd>{a.first_department?.name ?? '—'}</dd></div>}
+        {a.position === 'anggota' && <div><dt className="text-xs font-semibold uppercase text-slate-400">Pilihan bidang 2</dt><dd>{a.second_department?.name ?? '—'}</dd></div>}
         <div><dt className="text-xs font-semibold uppercase text-slate-400">NIM</dt><dd>{a.nim}</dd></div>
         <div><dt className="text-xs font-semibold uppercase text-slate-400">Program studi / semester</dt><dd>{[a.study_program, a.semester ? `semester ${a.semester}` : null].filter(Boolean).join(' · ') || '—'}</dd></div>
       </dl>
+      {isLeadership(a.position) && (
+        <div className="mt-4 space-y-3 text-sm">
+          {a.vision_mission && <div><p className="text-xs font-semibold uppercase text-slate-400">Visi dan misi</p><p className="mt-1 whitespace-pre-line break-words text-slate-800">{a.vision_mission}</p></div>}
+          {a.work_program && <div><p className="text-xs font-semibold uppercase text-slate-400">Program kerja</p><p className="mt-1 whitespace-pre-line break-words text-slate-800">{a.work_program}</p></div>}
+        </div>
+      )}
       {a.note_public && <p className="mt-4 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-900"><strong>Catatan panitia:</strong> {a.note_public}</p>}
       {WITHDRAWABLE.includes(a.status) && (
         <div className="mt-4 border-t border-slate-100 pt-4"><Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => onWithdraw(a)}>Mengundurkan diri</Button></div>
@@ -57,7 +64,7 @@ export function RecruitmentRegisterPage() {
 
   const info = useQuery({ queryKey: ['recruitment', 'info'], queryFn: fetchRecruitmentInfo })
   const mine = useQuery({ queryKey: ['recruitment', 'mine', user?.id], queryFn: () => fetchMyRecruitment(user!.id), enabled: Boolean(user) })
-  const { register, handleSubmit, watch, reset, setValue, getValues, formState: { errors, isSubmitting } } = useForm<RecruitmentInput>({ defaultValues: { email: user?.email ?? '' } })
+  const { register, handleSubmit, watch, reset, setValue, getValues, formState: { errors, isSubmitting } } = useForm<RecruitmentInput>({ defaultValues: { email: user?.email ?? '', position: '' } })
 
   useEffect(() => { if (user?.email && !getValues('email')) setValue('email', user.email) }, [user?.email, getValues, setValue])
 
@@ -66,11 +73,15 @@ export function RecruitmentRegisterPage() {
   const openPeriods = (info.data?.periods ?? []).filter((p) => windowState(p.start_date, p.end_date, today) === 'open' && !taken.has(p.id))
   const periodId = watch('periodId')
   const firstDept = watch('firstDepartmentId')
+  const position = watch('position')
+  const leader = isLeadership(position)
+  const track = leader ? 'L' : 'S'
   const period = openPeriods.find((p) => p.id === periodId)
-  const reqs = splitRequirements(period?.requirements)
+  // Calon Ketua/Wakil memakai syarat khusus bila diisi pengelola; bila kosong, memakai syarat umum.
+  const reqs = splitRequirements(leader && period?.leadership_requirements?.trim() ? period.leadership_requirements : period?.requirements)
   // Tanpa daftar syarat terperinci: satu pernyataan umum (merujuk pedoman)
-  const items = reqs.length > 0 ? reqs : ['Saya telah membaca Pedoman Kemahasiswaan dan memenuhi seluruh persyaratan pendaftaran pengurus.']
-  const allChecked = Boolean(period) && items.every((_, i) => checked[`${period?.id}:${i}`])
+  const items = reqs.length > 0 ? reqs : [leader ? 'Saya telah membaca Pedoman Kemahasiswaan dan memenuhi seluruh persyaratan calon Ketua/Wakil Ketua DEMA.' : 'Saya telah membaca Pedoman Kemahasiswaan dan memenuhi seluruh persyaratan pendaftaran pengurus.']
+  const allChecked = Boolean(period) && items.every((_, i) => checked[`${period?.id}:${track}:${i}`])
 
   const withdraw = useMutation({
     mutationFn: (id: string) => withdrawRecruitment(id),
@@ -81,9 +92,13 @@ export function RecruitmentRegisterPage() {
   async function onSubmit(v: RecruitmentInput) {
     if (!allChecked) { toast.error('Centang semua persyaratan terlebih dahulu.'); return }
     try {
-      const r = await submitRecruitment(v)
+      // Bersihkan isian jalur lain (nilai bisa tersisa bila pengguna berganti posisi).
+      const payload: RecruitmentInput = isLeadership(v.position)
+        ? { ...v, firstDepartmentId: '', secondDepartmentId: '' }
+        : { ...v, secondDepartmentId: v.position === 'anggota' ? v.secondDepartmentId : '', visionMission: '', workProgram: '' }
+      const r = await submitRecruitment(payload)
       toast.success(`Pendaftaran terkirim. Nomor: ${r.registration_no}`)
-      setChecked({}); reset({ email: user?.email ?? '' })
+      setChecked({}); reset({ email: user?.email ?? '', position: '' })
       await qc.invalidateQueries({ queryKey: ['recruitment', 'mine'] })
     } catch (e) { toast.error(e instanceof Error ? e.message : 'Pendaftaran gagal.') }
   }
@@ -122,18 +137,44 @@ export function RecruitmentRegisterPage() {
                   </select>
                 </Field>
               </div>
-              <Field label="Pilihan bidang 1 *" htmlFor="firstDepartmentId" error={errors.firstDepartmentId?.message}>
-                <select id="firstDepartmentId" className={inputClass} {...register('firstDepartmentId', { required: 'Pilih bidang' })}>
-                  <option value="">— Pilih —</option>
-                  {info.data?.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              </Field>
-              <Field label="Pilihan bidang 2 (opsional)" htmlFor="secondDepartmentId" error={errors.secondDepartmentId?.message}>
-                <select id="secondDepartmentId" className={inputClass} {...register('secondDepartmentId')}>
-                  <option value="">—</option>
-                  {info.data?.departments.filter((d) => d.id !== firstDept).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              </Field>
+              <fieldset className="sm:col-span-2" aria-describedby={errors.position ? 'position-error' : undefined}>
+                <legend className="text-sm font-medium text-slate-700">Posisi yang dilamar *</legend>
+                <div className="mt-1.5 grid gap-4 sm:grid-cols-2">
+                  {([['leadership', 'Pimpinan DEMA'], ['staff', 'Bidang & anggota']] as const).map(([g, title]) => (
+                    <div key={g}>
+                      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+                      <div className="grid gap-2">
+                        {POSITIONS.filter((p) => p.group === g).map((p) => (
+                          <label key={p.value} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-300 bg-white p-3 text-sm has-[:checked]:border-emerald-600 has-[:checked]:bg-emerald-50 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600/30">
+                            <input type="radio" value={p.value} className="size-4 accent-emerald-700" {...register('position', { required: 'Pilih posisi yang dilamar' })} />
+                            <span className="font-medium text-slate-900">{p.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {errors.position && <p id="position-error" role="alert" className="mt-1.5 text-xs font-medium text-red-600">{errors.position.message}</p>}
+                {leader && <p className="mt-2 text-xs text-slate-500">Calon Ketua dan Wakil Ketua tidak memilih bidang, tetapi wajib mengisi visi-misi, program kerja, dan pengalaman organisasi.</p>}
+              </fieldset>
+              {position && !leader && (
+                <>
+                  <Field label="Pilihan bidang 1 *" htmlFor="firstDepartmentId" error={errors.firstDepartmentId?.message}>
+                    <select id="firstDepartmentId" className={inputClass} {...register('firstDepartmentId', { required: 'Pilih bidang' })}>
+                      <option value="">— Pilih —</option>
+                      {info.data?.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                  </Field>
+                  {position === 'anggota' && (
+                    <Field label="Pilihan bidang 2 (opsional)" htmlFor="secondDepartmentId" error={errors.secondDepartmentId?.message}>
+                      <select id="secondDepartmentId" className={inputClass} {...register('secondDepartmentId')}>
+                        <option value="">—</option>
+                        {info.data?.departments.filter((d) => d.id !== firstDept).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+                      </select>
+                    </Field>
+                  )}
+                </>
+              )}
               <Field label="Nama lengkap *" htmlFor="fullName" error={errors.fullName?.message}>
                 <input id="fullName" autoComplete="name" className={inputClass} {...register('fullName', { required: 'Wajib diisi', minLength: { value: 2, message: 'Minimal 2 karakter' }, ...max(150) })} />
               </Field>
@@ -157,9 +198,23 @@ export function RecruitmentRegisterPage() {
                   <textarea id="motivation" rows={5} className={inputClass} {...register('motivation', { required: 'Wajib diisi', minLength: { value: 20, message: 'Minimal 20 karakter' }, ...max(3000) })} />
                 </Field>
               </div>
+              {leader && (
+                <>
+                  <div className="sm:col-span-2">
+                    <Field label="Visi dan misi *" htmlFor="visionMission" error={errors.visionMission?.message} hint="Minimal 30 karakter.">
+                      <textarea id="visionMission" rows={5} className={inputClass} {...register('visionMission', { required: 'Wajib diisi', minLength: { value: 30, message: 'Minimal 30 karakter' }, ...max(4000) })} />
+                    </Field>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Field label="Program kerja *" htmlFor="workProgram" error={errors.workProgram?.message} hint="Minimal 30 karakter. Tuliskan program unggulan yang akan dijalankan.">
+                      <textarea id="workProgram" rows={5} className={inputClass} {...register('workProgram', { required: 'Wajib diisi', minLength: { value: 30, message: 'Minimal 30 karakter' }, ...max(4000) })} />
+                    </Field>
+                  </div>
+                </>
+              )}
               <div className="sm:col-span-2">
-                <Field label="Pengalaman organisasi (opsional)" htmlFor="experience" error={errors.experience?.message}>
-                  <textarea id="experience" rows={4} className={inputClass} {...register('experience', max(3000))} />
+                <Field label={leader ? 'Pengalaman organisasi *' : 'Pengalaman organisasi (opsional)'} htmlFor="experience" error={errors.experience?.message} hint={leader ? 'Minimal 20 karakter.' : undefined}>
+                  <textarea id="experience" rows={4} className={inputClass} {...register('experience', leader ? { required: 'Wajib diisi untuk calon Ketua dan Wakil Ketua', minLength: { value: 20, message: 'Minimal 20 karakter' }, ...max(3000) } : max(3000))} />
                 </Field>
               </div>
             </div>
@@ -168,7 +223,7 @@ export function RecruitmentRegisterPage() {
               <fieldset className="space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
                 <legend className="px-2 font-display text-lg font-semibold text-emerald-900">Persyaratan — centang yang telah Anda penuhi</legend>
                 {items.map((r, i) => {
-                  const key = `${period.id}:${i}`
+                  const key = `${period.id}:${track}:${i}`
                   return (
                     <label key={key} className="flex cursor-pointer items-start gap-3 text-sm text-slate-800">
                       <input type="checkbox" className="mt-0.5 size-4 accent-emerald-700" checked={Boolean(checked[key])} onChange={(e) => setChecked((c) => ({ ...c, [key]: e.target.checked }))} />

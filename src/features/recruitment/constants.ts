@@ -8,6 +8,16 @@ export const RECRUIT_STATUSES = [
 ] as const
 export const RECRUIT_STATUS_LABEL: Record<string, string> = Object.fromEntries(RECRUIT_STATUSES.map((s) => [s.value, s.label]))
 export const RECRUIT_STATUS_CLS: Record<string, string> = Object.fromEntries(RECRUIT_STATUSES.map((s) => [s.value, s.cls]))
+/** Posisi yang dilamar. Jalur 'leadership' = Ketua/Wakil Ketua; jalur 'staff' = Koordinator Bidang/Anggota. */
+export const POSITIONS = [
+  { value: 'ketua', label: 'Ketua DEMA', group: 'leadership' },
+  { value: 'wakil', label: 'Wakil Ketua DEMA', group: 'leadership' },
+  { value: 'koordinator', label: 'Koordinator Bidang', group: 'staff' },
+  { value: 'anggota', label: 'Anggota Bidang', group: 'staff' },
+] as const
+export const POSITION_LABEL: Record<string, string> = Object.fromEntries(POSITIONS.map((p) => [p.value, p.label]))
+export const isLeadership = (p: string | null | undefined) => p === 'ketua' || p === 'wakil'
+
 /** Pendaftar masih boleh mengundurkan diri pada status ini (ditegakkan juga oleh database). */
 export const WITHDRAWABLE = ['submitted', 'reviewing']
 

@@ -1,5 +1,5 @@
 -- stage9_test.sql | Uji rekrutmen kepengurusan + komentar/like berita. Semua di-ROLLBACK.
--- Prasyarat: migrasi 0001-0013. Baris "ok - ..." = lulus.
+-- Prasyarat: migrasi 0001-0013 dan 0020 (posisi pendaftaran). Baris "ok - ..." = lulus.
 begin;
 create function pg_temp.act_as(_uid uuid) returns void language plpgsql as $$
 begin perform set_config('request.jwt.claims', case when _uid is null then '' else json_build_object('sub',_uid,'role','authenticated')::text end, true);
@@ -98,6 +98,20 @@ select pg_temp.cnt(null,'select 1 from public.news_likes',0,'anonim tidak bisa m
 select pg_temp.cnt('00000000-0000-0000-0000-0000000000b1','select 1 from public.news_likes',1,'pengguna hanya melihat like miliknya');
 select pg_temp.affected('00000000-0000-0000-0000-0000000000b2',$q$delete from public.news_likes where user_id='00000000-0000-0000-0000-0000000000b1'$q$,0,'tidak bisa menghapus like orang lain');
 select pg_temp.affected('00000000-0000-0000-0000-0000000000b1',$q$delete from public.news_likes where user_id='00000000-0000-0000-0000-0000000000b1'$q$,1,'unlike');
+
+-- Jalur Ketua/Wakil vs Koordinator/Anggota (migrasi 0020)
+insert into auth.users(id,aud,role,email) values ('00000000-0000-0000-0000-0000000000b4','authenticated','authenticated','p4@t');
+select pg_temp.fails('00000000-0000-0000-0000-0000000000b4',$q$select public.submit_recruitment('70000000-0000-0000-0000-000000000001',null,null,'P Empat','124',null,3,'p4@x.id','08','Motivasi saya cukup panjang untuk lolos','Pengalaman organisasi saya cukup panjang',true,'ketua',null,null)$q$,'leadership_fields_required','ketua tanpa visi-misi/program kerja ditolak');
+select pg_temp.fails('00000000-0000-0000-0000-0000000000b4',$q$select public.submit_recruitment('70000000-0000-0000-0000-000000000001',null,null,'P Empat','124',null,3,'p4@x.id','08','Motivasi saya cukup panjang untuk lolos',null,true,'wakil','Visi dan misi saya cukup panjang untuk diterima','Program kerja saya cukup panjang untuk diterima')$q$,'experience_required','wakil tanpa pengalaman ditolak');
+select pg_temp.fails('00000000-0000-0000-0000-0000000000b4',$q$select public.submit_recruitment('70000000-0000-0000-0000-000000000001',null,null,'P Empat','124',null,3,'p4@x.id','08','Motivasi saya cukup panjang untuk lolos',null,true,'anggota',null,null)$q$,'invalid_department','anggota tanpa bidang ditolak');
+select pg_temp.fails('00000000-0000-0000-0000-0000000000b4',$q$select public.submit_recruitment('70000000-0000-0000-0000-000000000001',null,null,'P Empat','124',null,3,'p4@x.id','08','Motivasi saya cukup panjang untuk lolos',null,true,'presiden',null,null)$q$,'invalid_position','posisi tidak dikenal ditolak');
+do $$ declare r jsonb; n int; begin
+  perform pg_temp.act_as('00000000-0000-0000-0000-0000000000b4');
+  r := public.submit_recruitment('70000000-0000-0000-0000-000000000001','d0000000-0000-0000-0000-000000000001',null,'P Empat','124',null,3,'p4@x.id','08','Motivasi saya cukup panjang untuk lolos','Pengalaman organisasi saya cukup panjang',true,'ketua','Visi dan misi saya cukup panjang untuk diterima','Program kerja saya cukup panjang untuk diterima');
+  reset role;
+  select count(*) into n from public.recruitment_applications where id = (r->>'id')::uuid and position='ketua' and first_department_id is null and vision_mission is not null;
+  if n <> 1 then raise exception 'FAIL: ketua tersimpan tanpa bidang'; end if;
+  raise notice 'ok - ketua mendaftar tanpa bidang, visi-misi tersimpan'; end $$;
 
 -- Batas 20 komentar/jam
 do $$ declare i int; begin

@@ -12,7 +12,7 @@ import { QueryBoundary } from '../../components/ui/QueryBoundary'
 import { SearchBar } from '../../components/ui/SearchBar'
 import { ResourceManager } from '../../features/admin/ResourceManager'
 import { RESOURCES } from '../../features/admin/resources'
-import { RECRUIT_STATUSES, RECRUIT_STATUS_CLS, RECRUIT_STATUS_LABEL } from '../../features/recruitment/constants'
+import { POSITIONS, POSITION_LABEL, RECRUIT_STATUSES, RECRUIT_STATUS_CLS, RECRUIT_STATUS_LABEL, isLeadership } from '../../features/recruitment/constants'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { supabase } from '../../lib/supabase'
 import { describeDbError } from '../../services/adminErrors'
@@ -23,19 +23,21 @@ import { formatDateTime } from '../../utils/format'
 interface Row {
   id: string; registration_no: string; full_name: string; nim: string; study_program: string | null; semester: number | null
   email: string; phone: string; motivation: string; experience: string | null; status: string; note_public: string | null; created_at: string
+  position: string; vision_mission: string | null; work_program: string | null
   period: { name: string; academic_year: string } | null
   first_department: { name: string } | null; second_department: { name: string } | null
 }
 const PAGE = 15
-const COLS = `id, registration_no, full_name, nim, study_program, semester, email, phone, motivation, experience, status, note_public, created_at, period:recruitment_periods(name, academic_year), first_department:${FK_FIRST}, second_department:${FK_SECOND}`
+const COLS = `id, registration_no, full_name, nim, study_program, semester, email, phone, motivation, experience, position, vision_mission, work_program, status, note_public, created_at, period:recruitment_periods(name, academic_year), first_department:${FK_FIRST}, second_department:${FK_SECOND}`
 const Badge = ({ status }: { status: string }) => <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${RECRUIT_STATUS_CLS[status] ?? ''}`}>{RECRUIT_STATUS_LABEL[status] ?? status}</span>
 
-interface Filters { q: string; status: string; periodId: string }
+interface Filters { q: string; status: string; periodId: string; position: string }
 
 function applyFilters<T extends { eq: (c: string, v: string) => T; ilike: (c: string, v: string) => T }>(query: T, f: Filters): T {
   let qy = query
   if (f.status) qy = qy.eq('status', f.status)
   if (f.periodId) qy = qy.eq('period_id', f.periodId)
+  if (f.position) qy = qy.eq('position', f.position)
   if (f.q) {
     const esc = `%${f.q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`
     qy = /^REK/i.test(f.q) ? qy.eq('registration_no', f.q.toUpperCase()) : /^\d+$/.test(f.q) ? qy.ilike('nim', esc) : qy.ilike('full_name', esc)
@@ -96,10 +98,13 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
         <dl className="mt-5 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
           {field('NIM', a.nim)}{field('Program studi', a.study_program)}{field('Semester', a.semester)}
           {field('Email', a.email)}{field('Telepon', a.phone)}
-          {field('Pilihan bidang 1', a.first_department?.name)}{field('Pilihan bidang 2', a.second_department?.name)}
+          {field('Posisi yang dilamar', POSITION_LABEL[a.position] ?? a.position)}
+          {!isLeadership(a.position) && field('Pilihan bidang 1', a.first_department?.name)}{a.position === 'anggota' && field('Pilihan bidang 2', a.second_department?.name)}
         </dl>
         <h2 className="mt-6 text-xs font-semibold uppercase text-slate-400">Motivasi</h2>
         <p className="mt-1 whitespace-pre-line break-words text-sm text-slate-800">{a.motivation}</p>
+        {a.vision_mission && (<><h2 className="mt-5 text-xs font-semibold uppercase text-slate-400">Visi dan misi</h2><p className="mt-1 whitespace-pre-line break-words text-sm text-slate-800">{a.vision_mission}</p></>)}
+        {a.work_program && (<><h2 className="mt-5 text-xs font-semibold uppercase text-slate-400">Program kerja</h2><p className="mt-1 whitespace-pre-line break-words text-sm text-slate-800">{a.work_program}</p></>)}
         {a.experience && (<><h2 className="mt-5 text-xs font-semibold uppercase text-slate-400">Pengalaman organisasi</h2><p className="mt-1 whitespace-pre-line break-words text-sm text-slate-800">{a.experience}</p></>)}
       </div>
 
@@ -129,7 +134,7 @@ function Detail({ id, onBack }: { id: string; onBack: () => void }) {
 function Applicants() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const [f, setF] = useState<Filters>({ q: '', status: '', periodId: '' })
+  const [f, setF] = useState<Filters>({ q: '', status: '', periodId: '', position: '' })
   const [exporting, setExporting] = useState(false)
   const set = (patch: Partial<Filters>) => { setF((p) => ({ ...p, ...patch })); setPage(1) }
 
@@ -162,10 +167,10 @@ function Applicants() {
       const log = await supabase.rpc('log_recruitment_export', { p_count: all.length, p_filter: desc })
       if (log.error) throw log.error
 
-      const head = ['No. Pendaftaran', 'Nama', 'NIM', 'Program Studi', 'Semester', 'Periode', 'Bidang 1', 'Bidang 2', 'Status', 'Email', 'Telepon', 'Motivasi', 'Pengalaman', 'Tanggal Daftar']
+      const head = ['No. Pendaftaran', 'Nama', 'NIM', 'Program Studi', 'Semester', 'Periode', 'Posisi', 'Bidang 1', 'Bidang 2', 'Visi dan Misi', 'Program Kerja', 'Status', 'Email', 'Telepon', 'Motivasi', 'Pengalaman', 'Tanggal Daftar']
       const lines = [head.map(csvCell).join(',')]
       for (const r of all) {
-        lines.push([r.registration_no, r.full_name, r.nim, r.study_program, r.semester, r.period?.name, r.first_department?.name, r.second_department?.name, RECRUIT_STATUS_LABEL[r.status] ?? r.status, r.email, r.phone, r.motivation, r.experience, r.created_at].map(csvCell).join(','))
+        lines.push([r.registration_no, r.full_name, r.nim, r.study_program, r.semester, r.period?.name, POSITION_LABEL[r.position] ?? r.position, r.first_department?.name, r.second_department?.name, r.vision_mission, r.work_program, RECRUIT_STATUS_LABEL[r.status] ?? r.status, r.email, r.phone, r.motivation, r.experience, r.created_at].map(csvCell).join(','))
       }
       const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
       const url = URL.createObjectURL(blob)
@@ -180,9 +185,10 @@ function Applicants() {
   const rows = list.data?.rows ?? []
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 lg:grid-cols-[1fr_12rem_14rem]">
+      <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_14rem]">
         <SearchBar value={f.q} onSearch={(v) => set({ q: v })} placeholder="Cari nama, NIM, atau no. pendaftaran (REK…)" />
         <FilterSelect label="Status" value={f.status} onChange={(v) => set({ status: v })} options={RECRUIT_STATUSES.map((s) => ({ value: s.value, label: s.label }))} />
+        <FilterSelect label="Posisi" value={f.position} onChange={(v) => set({ position: v })} options={POSITIONS.map((p) => ({ value: p.value, label: p.label }))} />
         <FilterSelect label="Periode" value={f.periodId} onChange={(v) => set({ periodId: v })} options={(periods.data ?? []).map((p) => ({ value: p.id, label: `${p.name} (${p.academic_year})` }))} />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -193,12 +199,12 @@ function Applicants() {
       <QueryBoundary isLoading={list.isLoading} error={list.error} onRetry={() => list.refetch()} isEmpty={rows.length === 0} emptyIcon={Users} emptyTitle="Belum ada pendaftar">
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Pendaftar</th><th className="px-4 py-3">Bidang pilihan</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Daftar</th></tr></thead>
+            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-4 py-3">Pendaftar</th><th className="px-4 py-3">Posisi / bidang</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Daftar</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {rows.map((r) => (
                 <tr key={r.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setOpenId(r.id)}>
                   <td className="px-4 py-3"><button type="button" className="text-left font-medium text-emerald-800 hover:underline" onClick={(e) => { e.stopPropagation(); setOpenId(r.id) }}>{r.full_name}</button><p className="font-mono text-xs text-slate-400">{r.registration_no} · NIM {r.nim}</p></td>
-                  <td className="px-4 py-3">{r.first_department?.name ?? '—'}{r.second_department && <p className="text-xs text-slate-400">2. {r.second_department.name}</p>}</td>
+                  <td className="px-4 py-3"><span className="font-medium text-slate-800">{POSITION_LABEL[r.position] ?? r.position}</span>{!isLeadership(r.position) && <p className="text-xs text-slate-500">{r.first_department?.name ?? '—'}{r.second_department && ` · 2. ${r.second_department.name}`}</p>}</td>
                   <td className="px-4 py-3"><Badge status={r.status} /></td>
                   <td className="whitespace-nowrap px-4 py-3 text-slate-500">{formatDateTime(r.created_at)}</td>
                 </tr>
