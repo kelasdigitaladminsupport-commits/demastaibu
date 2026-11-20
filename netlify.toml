@@ -14,6 +14,15 @@
 [functions]
   directory = "netlify/functions"
 
+# Alamat bawaan Netlify dialihkan permanen ke domain resmi (agar Google tidak mengindeks dua alamat).
+# Hanya berlaku untuk host ini; Deploy Preview / Branch Deploy memakai host lain sehingga tidak terpengaruh.
+# PENTING: ubah dulu private.notify_config.url di Supabase ke domain resmi sebelum men-deploy aturan ini.
+[[redirects]]
+  from = "https://dema-stai-bu.netlify.app/*"
+  to = "https://demastaibu.my.id/:splat"
+  status = 301
+  force = true
+
 # robots.txt dan sitemap.xml dibuat dinamis oleh fungsi (HARUS di atas aturan SPA di bawah)
 [[redirects]]
   from = "/sitemap.xml"
@@ -50,11 +59,24 @@
 [images]
   remote_images = ['https://[a-z0-9-]+\.supabase\.co/storage/v1/object/public/.*']
 
+# Berkas /assets yang sudah tidak ada (sisa versi lama) harus 404, BUKAN index.html. Bila tidak, peramban menerima HTML
+# dengan tipe text/html dan muncul galat "Failed to load module script".
+[[redirects]]
+  from = "/assets/*"
+  to = "/404.html"
+  status = 404
+
 # SPA: semua URL diarahkan ke index.html agar React Router bisa membuka halaman langsung
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+
+# index.html tidak boleh di-cache lama agar pengunjung selalu mendapat daftar berkas versi terbaru
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
 
 # Berkas hasil build memiliki nama berisi hash -> aman di-cache lama (menghemat bandwidth)
 [[headers]]
