@@ -18,7 +18,7 @@ async function rest(base, key, path) {
 
 export default async (req) => {
   const env = process.env
-  const site = (env.VITE_SITE_URL || env.URL || new URL(req.url).origin).trim().replace(/\/$/, '')
+  const site = 'https://demastaibu.my.id'
   const base = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').trim().replace(/\/$/, '')
   const key = (env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '').trim()
 
