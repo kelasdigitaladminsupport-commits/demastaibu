@@ -73,3 +73,21 @@ Bila yang tampil masih kartu bawaan (huruf "D"):
 3. Variabel `VITE_SUPABASE_URL` dan `VITE_SUPABASE_PUBLISHABLE_KEY` harus tersedia untuk **Functions** (Netlify → Environment variables → Scopes: *All*), lalu deploy ulang.
 4. Buka `https://SITUS/berita/SLUG` → View page source → cari `og:image`. Bila isinya `og-default.png`, fungsi `meta` belum mendapat data (lihat poin 2–3 dan Netlify → Functions → `meta` → log).
 5. Halaman lain (beranda, profil, dll.) memakai kartu bawaan; ganti `public/og-default.png` dengan desain resmi 1200×630.
+
+## Memastikan SEMUA halaman dan postingan terindeks
+Yang otomatis masuk `sitemap.xml`: halaman utama, semua halaman tetap (profil, visi-misi, struktur, bidang, program kerja,
+galeri, laporan, kontak, aspirasi, forum, rekrutmen, kolaborasi, dll.), serta **setiap berita, agenda, dan galeri berstatus tayang**.
+Konten baru masuk sendiri (sitemap di-cache 1 jam). Topik forum buatan pengguna sengaja tidak dimasukkan.
+
+Agar Google cepat dan tepat mengindeks:
+1. **Kirim sitemap** di Search Console pada properti domain resmi (`https://DOMAIN-ANDA/sitemap.xml`) sampai berstatus *Success*.
+2. **Minta pengindeksan** (URL Inspection -> Request indexing) untuk halaman penting: `/struktur`, `/profil`, `/berita`, `/agenda`,
+   dan tiap berita penting yang baru terbit. Ada kuota harian (sekitar belasan URL), jadi prioritaskan.
+3. **Setiap postingan**: status *Terbit*, judul jelas, **ringkasan terisi** (menjadi deskripsi di Google), dan gambar sampul.
+4. **Halaman tetap memiliki `<head>` sendiri sejak HTML awal.** Skrip `scripts/prerender-head.mjs` (dijalankan otomatis saat
+   `npm run build`) membuat judul, deskripsi, dan alamat kanonik per halaman, sehingga `/struktur` tidak dianggap duplikat beranda.
+   Pastikan `VITE_SITE_URL` berisi domain resmi saat build. Uji: buka `/struktur` -> View page source -> `<title>` dan
+   `rel="canonical"` harus menyebut Struktur Kepengurusan / alamat `/struktur`.
+5. **Pantau**: Search Console -> *Pages*; cari `site:DOMAIN-ANDA` di Google. Status *Discovered/Crawled - currently not indexed*
+   pada situs baru itu wajar; tambah konten rutin dan dapatkan tautan masuk (situs kampus, bio Instagram, dll.).
+6. Halaman utilitas (`/verifikasi-email`, `/kolaborasi/verifikasi`, `/rekrutmen/daftar`, login, admin, dll.) ditandai `noindex`.

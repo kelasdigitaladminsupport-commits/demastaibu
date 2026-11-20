@@ -24,4 +24,4 @@ export function siteBase(): string {
 }
 
 /** Halaman privat/transaksional yang tidak boleh diindeks mesin pencari. */
-export const NOINDEX_PATH = /^\/(admin|masuk|daftar|lupa-password|reset-password)(\/|$)|^\/pmb\/(daftar|status|pendaftaran|bukti)(\/|$)|^\/forum\/baru$/
+export const NOINDEX_PATH = /^\/(admin|masuk|daftar|lupa-password|reset-password|verifikasi-email)(\/|$)|^\/pmb\/(daftar|status|pendaftaran|bukti)(\/|$)|^\/forum\/baru$|^\/kolaborasi\/verifikasi$|^\/rekrutmen\/daftar$/
