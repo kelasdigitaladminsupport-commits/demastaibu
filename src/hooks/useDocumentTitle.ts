@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, SITE_SHORT } from '../utils/constants'
 import { setMeta, truncate } from '../features/seo/head'
+import { stripFormatting } from '../utils/richText'
 
 /** Judul tab + judul pratinjau tautan (Open Graph/Twitter). Tanpa argumen = judul beranda. */
 export function useDocumentTitle(title?: string) {
@@ -15,7 +16,8 @@ export function useDocumentTitle(title?: string) {
 /** Deskripsi halaman untuk hasil pencarian Google dan pratinjau tautan. Dikembalikan ke bawaan saat halaman ditinggalkan. */
 export function useSeoDescription(description?: string | null) {
   useEffect(() => {
-    const d = description ? truncate(description) : DEFAULT_DESCRIPTION
+    const clean = description ? stripFormatting(description) : ''
+    const d = clean ? truncate(clean) : DEFAULT_DESCRIPTION
     setMeta('name', 'description', d)
     setMeta('property', 'og:description', d)
     setMeta('name', 'twitter:description', d)

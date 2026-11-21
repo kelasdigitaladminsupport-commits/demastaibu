@@ -58,7 +58,7 @@ export const RESOURCES: Record<string, ResourceConfig> = {
       { type: 'text', name: 'author_name', label: 'Nama penulis', max: 120 },
       { type: 'image', name: 'cover_path', label: 'Gambar sampul', bucket: 'public-media', folder: 'news' },
       { type: 'textarea', name: 'excerpt', label: 'Ringkasan', max: 400, rows: 3 },
-      { type: 'textarea', name: 'content', label: 'Isi berita', rows: 14, hint: 'Pisahkan paragraf dengan satu baris kosong. Tag HTML tidak ditampilkan.' },
+      { type: 'textarea', name: 'content', label: 'Isi berita', rows: 14, hint: 'Pisahkan paragraf dengan satu baris kosong. Alamat https:// otomatis menjadi tautan yang bisa diklik. Format yang didukung: **tebal**, ### judul, daftar (- butir), dan [teks tautan](https://alamat). Tag HTML tidak ditampilkan.' },
       { type: 'select', name: 'status', label: 'Status', required: true, options: [{ value: 'draft', label: 'Draf (belum tayang)' }, { value: 'published', label: 'Terbit' }] },
       { type: 'datetime', name: 'published_at', label: 'Waktu tayang', hint: 'Kosongkan untuk tayang sekarang. Isi waktu mendatang untuk menjadwalkan.' },
     ],

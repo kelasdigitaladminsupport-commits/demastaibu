@@ -8,7 +8,8 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const attr = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const text = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-const clip = (s, n = 160) => { const t = String(s ?? '').replace(/\s+/g, ' ').trim(); return t.length <= n ? t : `${t.slice(0, n - 1).trimEnd()}…` }
+const plain = (s) => String(s ?? '').replace(/\[([^\]\n]+)\]\((?:https?:\/\/|mailto:)[^\s)]+\)/g, '$1').replace(/https?:\/\/[^\s<>"'*]+/g, '').replace(/\*\*/g, '').replace(/^#{1,6}\s+/gm, '').replace(/^\s*[-*•]\s+/gm, '')
+const clip = (s, n = 160) => { const t = plain(s).replace(/\s+/g, ' ').trim(); return t.length <= n ? t : `${t.slice(0, n - 1).trimEnd()}…` }
 const jsonSafe = (o) => JSON.stringify(o).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
 
 async function getJson(url, headers) {
