@@ -35,8 +35,14 @@ function respond(html, { found }) {
 export default async (req) => {
   const env = process.env
   const url = new URL(req.url)
-  const type = url.searchParams.get('type')
-  const slug = (url.searchParams.get('slug') || '').replace(/\/+$/, '')
+  // Jenis & slug dibaca dari ALAMAT yang diminta (/berita/slug). Bila fungsi dipanggil lewat aturan pengalihan, Netlify tidak selalu
+  // meneruskan parameter ?type=&slug= ke fungsi, sehingga alamat asli menjadi sumber utama; parameter dipakai sebagai cadangan
+  // (mis. saat fungsi dipanggil langsung: /.netlify/functions/meta?type=berita&slug=...).
+  const fromPath = url.pathname.match(/^\/(berita|agenda|galeri)\/([^/]+)\/?$/)
+  let pathSlug = ''
+  if (fromPath) { try { pathSlug = decodeURIComponent(fromPath[2]) } catch { pathSlug = '' } }
+  const type = fromPath ? fromPath[1] : url.searchParams.get('type')
+  const slug = (fromPath ? pathSlug : (url.searchParams.get('slug') || '')).replace(/\/+$/, '')
   const site = (env.VITE_SITE_URL || env.URL || url.origin).trim().replace(/\/$/, '')
 
   // 1) HTML aplikasi. Bila gagal diambil, tidak ada yang dapat disajikan dengan aman.
@@ -118,3 +124,6 @@ export default async (req) => {
 
   return respond(out, { found: true })
 }
+
+// Jalur khusus: fungsi menangani alamat ini langsung (tanpa bergantung pada aturan pengalihan di netlify.toml).
+export const config = { path: ['/berita/*', '/agenda/*', '/galeri/*'] }
