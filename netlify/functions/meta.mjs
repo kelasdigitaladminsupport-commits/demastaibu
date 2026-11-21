@@ -54,12 +54,18 @@ export default async (req) => {
     html = await r.text()
   } catch { return new Response('Layanan sementara tidak tersedia. Silakan muat ulang beberapa saat lagi.', { status: 502 }) }
 
-  if (!['berita', 'agenda', 'galeri'].includes(type) || !(type === 'galeri' ? UUID.test(slug) : SLUG.test(slug))) return respond(html, { found: false })
+  if (!['berita', 'agenda', 'galeri'].includes(type) || !(type === 'galeri' ? UUID.test(slug) : SLUG.test(slug))) {
+    console.log('[meta] dilewati: jenis/slug tidak valid', JSON.stringify({ path: url.pathname, type, slug }))
+    return respond(html, { found: false })
+  }
 
   // 2) Data publik (kunci publishable + RLS: hanya yang sudah tayang yang dapat dibaca).
   const base = (env.VITE_SUPABASE_URL || env.SUPABASE_URL || '').trim().replace(/\/$/, '')
   const key = (env.VITE_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY || '').trim()
-  if (!base || !key) return respond(html, { found: false })
+  if (!base || !key) {
+    console.log('[meta] dilewati: variabel Supabase tidak terbaca oleh fungsi', JSON.stringify({ url: Boolean(base), key: Boolean(key) }))
+    return respond(html, { found: false })
+  }
   const h = { apikey: key, Authorization: `Bearer ${key}` }
   const s = encodeURIComponent(slug)
   let row = null
@@ -78,7 +84,11 @@ export default async (req) => {
     const d = await getJson(`${base}/rest/v1/events?select=title,description,poster_path,event_date,location&slug=eq.${s}&is_published=eq.true&limit=1`, h)
     row = d?.[0] ?? null
   }
-  if (!row) return respond(html, { found: false })
+  if (!row) {
+    console.log('[meta] data tidak ditemukan (belum tayang / slug salah / Supabase menolak)', JSON.stringify({ type, slug }))
+    return respond(html, { found: false })
+  }
+  console.log('[meta] ok', JSON.stringify({ type, slug }))
 
   // 3) Susun metadata
   const siteShort = 'DEMA STAI Bahriyatul Ulum'
@@ -124,6 +134,3 @@ export default async (req) => {
 
   return respond(out, { found: true })
 }
-
-// Jalur khusus: fungsi menangani alamat ini langsung (tanpa bergantung pada aturan pengalihan di netlify.toml).
-export const config = { path: ['/berita/*', '/agenda/*', '/galeri/*'] }
